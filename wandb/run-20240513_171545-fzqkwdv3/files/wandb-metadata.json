@@ -1,0 +1,117 @@
+{
+    "os": "Linux-5.15.0-105-generic-x86_64-with-glibc2.10",
+    "python": "3.8.1",
+    "heartbeatAt": "2024-05-13T15:15:45.900085",
+    "startedAt": "2024-05-13T15:15:45.003030",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--environment",
+        "matrix_game",
+        "--max_episode_len",
+        "5",
+        "--meta_episode_len",
+        "15",
+        "--meta_episodes_per_policy_update",
+        "1"
+    ],
+    "state": "running",
+    "program": "/home/xyz/ETH/pytorch_rl2/train.py",
+    "codePathLocal": "train.py",
+    "codePath": "train.py",
+    "git": {
+        "remote": "git@github.com:YanzhenXiangRobotics/pytorch_rl2.git",
+        "commit": "51afa4b6c6d05b469c7f74076b9490ae0809b289"
+    },
+    "email": "xyz000327@gmail.com",
+    "root": "/home/xyz/ETH/pytorch_rl2",
+    "host": "xyz-IdeaPad-Gaming-3-15ACH6",
+    "username": "xyz",
+    "executable": "/home/xyz/miniconda3/envs/pytorch_rl2/bin/python",
+    "cpu_count": 6,
+    "cpu_count_logical": 12,
+    "cpu_freq": {
+        "current": 1263.1600833333334,
+        "min": 1200.0,
+        "max": 3300.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1300.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1657.921,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1300.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1300.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        },
+        {
+            "current": 1200.0,
+            "min": 1200.0,
+            "max": 3300.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 164.63391494750977,
+            "used": 152.98518753051758
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+            "memory_total": 4294967296
+        }
+    ],
+    "memory": {
+        "total": 7.111198425292969
+    }
+}

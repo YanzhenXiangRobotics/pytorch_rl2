@@ -9,6 +9,7 @@ import torch as tc
 
 from rl2.envs.bandit_env import BanditEnv
 from rl2.envs.mdp_env import MDPEnv
+from rl2.envs.stackelberg.follower_env import FollowerEnv, IteratedMatrixGame
 
 from rl2.agents.preprocessing.tabular import MABPreprocessing, MDPPreprocessing
 from rl2.agents.architectures.gru import GRU
@@ -32,7 +33,7 @@ def create_argparser():
         description="""Training script for RL^2.""")
 
     ### Environment
-    parser.add_argument("--environment", choices=['bandit', 'tabular_mdp'],
+    parser.add_argument("--environment", choices=['bandit', 'tabular_mdp', 'matrix_game'],
                         default='bandit')
     parser.add_argument("--num_states", type=int, default=10,
                         help="Ignored if environment is bandit.")
@@ -79,6 +80,11 @@ def create_env(environment, num_states, num_actions, max_episode_len):
             num_states=num_states,
             num_actions=num_actions,
             max_episode_length=max_episode_len)
+    if environment == 'matrix_game':
+        return FollowerEnv(
+            env=IteratedMatrixGame(matrix='prisoners_dilemma',
+                                   episode_length=max_episode_len,
+                                   memory=2))
     raise NotImplementedError
 
 
@@ -86,7 +92,7 @@ def create_preprocessing(environment, num_states, num_actions):
     if environment == 'bandit':
         return MABPreprocessing(
             num_actions=num_actions)
-    if environment == 'tabular_mdp':
+    if (environment == 'tabular_mdp') or (environment == 'matrix_game'):
         return MDPPreprocessing(
             num_states=num_states,
             num_actions=num_actions)
@@ -177,23 +183,42 @@ def main():
         max_episode_len=args.max_episode_len)
 
     # create learning system.
-    policy_net = create_net(
-        net_type='policy',
-        environment=args.environment,
-        architecture=args.architecture,
-        num_states=args.num_states,
-        num_actions=args.num_actions,
-        num_features=args.num_features,
-        context_size=args.meta_episode_len)
+    if args.environment == 'matrix_game':
+        policy_net = create_net(
+            net_type='policy',
+            environment=args.environment,
+            architecture=args.architecture,
+            num_states=env.num_states,
+            num_actions=env.num_actions,
+            num_features=args.num_features,
+            context_size=args.meta_episode_len)
 
-    value_net = create_net(
-        net_type='value',
-        environment=args.environment,
-        architecture=args.architecture,
-        num_states=args.num_states,
-        num_actions=args.num_actions,
-        num_features=args.num_features,
-        context_size=args.meta_episode_len)
+        value_net = create_net(
+            net_type='value',
+            environment=args.environment,
+            architecture=args.architecture,
+            num_states=env.num_states,
+            num_actions=env.num_actions,
+            num_features=args.num_features,
+            context_size=args.meta_episode_len)
+    else:
+        policy_net = create_net(
+            net_type='policy',
+            environment=args.environment,
+            architecture=args.architecture,
+            num_states=args.num_states,
+            num_actions=args.num_actions,
+            num_features=args.num_features,
+            context_size=args.meta_episode_len)
+
+        value_net = create_net(
+            net_type='value',
+            environment=args.environment,
+            architecture=args.architecture,
+            num_states=args.num_states,
+            num_actions=args.num_actions,
+            num_features=args.num_features,
+            context_size=args.meta_episode_len)
 
     policy_optimizer = tc.optim.AdamW(
         get_weight_decay_param_groups(policy_net, args.adam_wd),

@@ -22,6 +22,8 @@ from rl2.algos.common import (
 from rl2.utils.comm_util import sync_grads
 from rl2.utils.constants import ROOT_RANK
 
+import wandb
+run = wandb.init(project='rl2-matgame')
 
 def compute_losses(
         meta_episodes: List[MetaEpisode],
@@ -265,6 +267,8 @@ def training_loop(
         if comm.Get_rank() == ROOT_RANK:
             print("-" * 100)
             print(f"mean meta-episode return: {np.mean(meta_ep_returns):>0.3f}")
+            wandb.log({"mean meta-episode return": np.mean(meta_ep_returns),
+                       "num iterations": pol_iter})
             print("-" * 100)
             policy_checkpoint_fn(pol_iter + 1)
             value_checkpoint_fn(pol_iter + 1)
