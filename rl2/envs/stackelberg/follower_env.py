@@ -70,17 +70,10 @@ class FollowerEnv(MetaEpisodicEnv):
             new_state, reward, done, info.
         """
 
-        a_ts = {"leader": self._leader_response[self._state],
-               "follower": action}
+        al_t = self._leader_response[self._state]
+        
+        s_tp1, r_t, done_t, _, _  = self._env.step({"leader": al_t,
+                                                    "follower": action})
+        self._state = s_tp1["follower"]
 
-        s_tp1s, r_ts, done_ts, _, _  = self._env.step(a_ts)
-        s_tp1 = s_tp1s["follower"]
-        self._state = s_tp1
-
-        r_t = r_ts["follower"]
-
-        done_t = done_ts["follower"]
-        if done_t and auto_reset:
-            s_tp1 = self.reset()
-
-        return s_tp1, r_t, done_t, {}
+        return al_t, self._state, r_t["follower"], done_t["follower"], {}

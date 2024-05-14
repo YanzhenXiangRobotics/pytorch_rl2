@@ -22,9 +22,6 @@ from rl2.algos.common import (
 from rl2.utils.comm_util import sync_grads
 from rl2.utils.constants import ROOT_RANK
 
-import wandb
-run = wandb.init(project='rl2-matgame')
-
 def compute_losses(
         meta_episodes: List[MetaEpisode],
         policy_net: StatefulPolicyNet,
@@ -54,10 +51,13 @@ def compute_losses(
         return tc.FloatTensor(mb_field)
 
     # minibatch data tensors
+    mb_leader_acs = get_tensor('leader_acs', 'long')
+    mb_eps = get_tensor('eps', 'long')
+    mb_st_eps = get_tensor('st_eps', 'long')
     mb_obs = get_tensor('obs', 'long')
     mb_acs = get_tensor('acs', 'long')
-    mb_rews = get_tensor('rews')
-    mb_dones = get_tensor('dones')
+    # mb_rews = get_tensor('rews')
+    # mb_dones = get_tensor('dones')
     mb_logpacs = get_tensor('logpacs')
     mb_advs = get_tensor('advs')
     mb_tdlam_rets = get_tensor('tdlam_rets')
@@ -65,29 +65,35 @@ def compute_losses(
     # input for loss calculations
     B = len(meta_episodes)
     ac_dummy = tc.zeros(dtype=tc.int64, size=(B,))
-    rew_dummy = tc.zeros(dtype=tc.float32, size=(B,))
-    done_dummy = tc.ones(dtype=tc.float32, size=(B,))
+    # rew_dummy = tc.zeros(dtype=tc.float32, size=(B,))
+    # done_dummy = tc.ones(dtype=tc.float32, size=(B,))
 
+    prev_leader_obs = tc.cat((ac_dummy.unsqueeze(1), mb_obs[:, 0:-1]), dim=1)
+    prev_leader_action = tc.cat((ac_dummy.unsqueeze(1), mb_leader_acs[:, 0:-1]), dim=1)
+    episode = mb_eps
+    step_in_episode = mb_st_eps
     curr_obs = mb_obs
-    prev_action = tc.cat((ac_dummy.unsqueeze(1), mb_acs[:, 0:-1]), dim=1)
-    prev_reward = tc.cat((rew_dummy.unsqueeze(1), mb_rews[:, 0:-1]), dim=1)
-    prev_done = tc.cat((done_dummy.unsqueeze(1), mb_dones[:, 0:-1]), dim=1)
+    # prev_action = tc.cat((ac_dummy.unsqueeze(1), mb_acs[:, 0:-1]), dim=1)
+    # prev_reward = tc.cat((rew_dummy.unsqueeze(1), mb_rews[:, 0:-1]), dim=1)
+    # prev_done = tc.cat((done_dummy.unsqueeze(1), mb_dones[:, 0:-1]), dim=1)
     prev_state_policy_net = policy_net.initial_state(batch_size=B)
     prev_state_value_net = value_net.initial_state(batch_size=B)
 
     # forward pass implements unroll for recurrent/attentive architectures.
     pi_dists, _ = policy_net(
+        prev_leader_obs=prev_leader_obs,
+        prev_leader_action=prev_leader_action,
+        episode=episode,
+        step_in_episode=step_in_episode,
         curr_obs=curr_obs,
-        prev_action=prev_action,
-        prev_reward=prev_reward,
-        prev_done=prev_done,
         prev_state=prev_state_policy_net)
 
     vpreds, _ = value_net(
+        prev_leader_obs=prev_leader_obs,
+        prev_leader_action=prev_leader_action,
+        episode=episode,
+        step_in_episode=step_in_episode,
         curr_obs=curr_obs,
-        prev_action=prev_action,
-        prev_reward=prev_reward,
-        prev_done=prev_done,
         prev_state=prev_state_value_net)
 
     entropies = pi_dists.entropy()
@@ -141,6 +147,7 @@ def training_loop(
         standardize_advs: bool,
         max_pol_iters: int,
         pol_iters_so_far: int,
+        episode_len: int,
         policy_checkpoint_fn: Callable[[int], None],
         value_checkpoint_fn: Callable[[int], None],
         comm: type(MPI.COMM_WORLD),
@@ -176,6 +183,9 @@ def training_loop(
     Returns:
         None
     """
+    import wandb
+    run = wandb.init(project='rl2-matgame')
+
     meta_ep_returns = deque(maxlen=1000)
 
     for pol_iter in range(pol_iters_so_far, max_pol_iters):
@@ -187,7 +197,8 @@ def training_loop(
                 env=env,
                 policy_net=policy_net,
                 value_net=value_net,
-                meta_episode_len=meta_episode_len)
+                meta_episode_len=meta_episode_len,
+                episode_len=episode_len)
             meta_episode = assign_credit(
                 meta_episode=meta_episode,
                 gamma=discount_gamma,

@@ -22,10 +22,11 @@ class StatefulPolicyNet(tc.nn.Module, Generic[ArchitectureState]):
 
     def forward(
         self,
-        curr_obs: Union[tc.LongTensor, tc.FloatTensor],
-        prev_action: tc.LongTensor,
-        prev_reward: tc.FloatTensor,
-        prev_done: tc.FloatTensor,
+        prev_leader_obs: tc.LongTensor,
+        prev_leader_action: tc.LongTensor,
+        episode: tc.LongTensor,
+        step_in_episode: tc.LongTensor,
+        curr_obs: tc.LongTensor,
         prev_state: Optional[ArchitectureState]
     ) -> Tuple[tc.distributions.Categorical, ArchitectureState]:
         """
@@ -47,7 +48,11 @@ class StatefulPolicyNet(tc.nn.Module, Generic[ArchitectureState]):
                and the architecture's new state.
         """
         inputs = self._preprocessing(
-            curr_obs, prev_action, prev_reward, prev_done)
+            prev_leader_obs, 
+            prev_leader_action, 
+            episode, 
+            step_in_episode,
+            curr_obs)
 
         features, new_state = self._architecture(
             inputs=inputs, prev_state=prev_state)

@@ -14,6 +14,9 @@ from rl2.agents.integration.value_net import StatefulValueNet
 class MetaEpisode:
     def __init__(self, num_timesteps, dummy_obs):
         self.horizon = num_timesteps
+        self.leader_acs = np.zeros(self.horizon, 'int64')
+        self.eps = np.zeros(self.horizon, 'int64')
+        self.st_eps = np.zeros(self.horizon, 'int64')
         self.obs = np.array([dummy_obs for _ in range(self.horizon)])
         self.acs = np.zeros(self.horizon, 'int64')
         self.rews = np.zeros(self.horizon, 'float32')
@@ -29,7 +32,8 @@ def generate_meta_episode(
         env: MetaEpisodicEnv,
         policy_net: StatefulPolicyNet,
         value_net: StatefulValueNet,
-        meta_episode_len: int
+        meta_episode_len: int,
+        episode_len: int,
     ) -> MetaEpisode:
     """
     Generates a meta-episode: a sequence of episodes concatenated together,
@@ -51,35 +55,43 @@ def generate_meta_episode(
         num_timesteps=meta_episode_len,
         dummy_obs=env.reset())
 
+    ol_tm1 = np.array([0])
+    al_tm1 = np.array([0])
     o_t = np.array([env.reset()])
-    a_tm1 = np.array([0])
-    r_tm1 = np.array([0.0])
-    d_tm1 = np.array([1.0])
     h_tm1_policy_net = policy_net.initial_state(batch_size=1)
     h_tm1_value_net = value_net.initial_state(batch_size=1)
 
     for t in range(0, meta_episode_len):
+
+        ep_t = np.array([int(t / episode_len)])
+        st_t = np.array([t % episode_len])
+
         pi_dist_t, h_t_policy_net = policy_net(
+            prev_leader_obs=tc.LongTensor(ol_tm1),
+            prev_leader_action=tc.LongTensor(al_tm1),
+            episode=tc.LongTensor(ep_t),
+            step_in_episode=tc.LongTensor(st_t),
             curr_obs=tc.LongTensor(o_t),
-            prev_action=tc.LongTensor(a_tm1),
-            prev_reward=tc.FloatTensor(r_tm1),
-            prev_done=tc.FloatTensor(d_tm1),
             prev_state=h_tm1_policy_net)
 
         vpred_t, h_t_value_net = value_net(
+            prev_leader_obs=tc.LongTensor(ol_tm1),
+            prev_leader_action=tc.LongTensor(al_tm1),
+            episode=tc.LongTensor(ep_t),
+            step_in_episode=tc.LongTensor(st_t),
             curr_obs=tc.LongTensor(o_t),
-            prev_action=tc.LongTensor(a_tm1),
-            prev_reward=tc.FloatTensor(r_tm1),
-            prev_done=tc.FloatTensor(d_tm1),
             prev_state=h_tm1_value_net)
 
         a_t = pi_dist_t.sample()
         log_prob_a_t = pi_dist_t.log_prob(a_t)
 
-        o_tp1, r_t, done_t, _ = env.step(
+        al_t, o_tp1, r_t, done_t, _ = env.step(
             action=a_t.squeeze(0).detach().numpy(),
             auto_reset=True)
 
+        meta_episode.leader_acs[t] = al_t
+        meta_episode.eps[t] = ep_t
+        meta_episode.st_eps[t] = st_t
         meta_episode.obs[t] = o_t[0]
         meta_episode.acs[t] = a_t.squeeze(0).detach().numpy()
         meta_episode.rews[t] = r_t
@@ -87,10 +99,9 @@ def generate_meta_episode(
         meta_episode.logpacs[t] = log_prob_a_t.squeeze(0).detach().numpy()
         meta_episode.vpreds[t] = vpred_t.squeeze(0).detach().numpy()
 
+        ol_tm1 = np.copy(o_t)
+        al_tm1 = np.array([al_t])
         o_t = np.array([o_tp1])
-        a_tm1 = np.array([meta_episode.acs[t]])
-        r_tm1 = np.array([meta_episode.rews[t]])
-        d_tm1 = np.array([meta_episode.dones[t]])
         h_tm1_policy_net = h_t_policy_net
         h_tm1_value_net = h_t_value_net
 

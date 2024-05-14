@@ -28,7 +28,7 @@
                     "--meta_episode_len",
                     "15",
                     "--meta_episodes_per_policy_update",
-                    "1",
+                    "3",
                     "--architecture",
                     "transformer"
                     ]
