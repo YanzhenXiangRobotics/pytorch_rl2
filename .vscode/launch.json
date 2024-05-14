@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "MDP",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": ["--environment",
+                    "tabular_mdp",
+                    ]
+        },
+        {
             "name": "Training",
             "type": "debugpy",
             "request": "launch",
@@ -18,7 +28,9 @@
                     "--meta_episode_len",
                     "15",
                     "--meta_episodes_per_policy_update",
-                    "1"
+                    "1",
+                    "--architecture",
+                    "transformer"
                     ]
         },
         {
@@ -35,7 +47,9 @@
                     "--meta_episode_len",
                     "15",
                     "--meta_episodes_per_policy_update",
-                    "1"
+                    "1",
+                    "--architecture",
+                    "transformer"
                     ]
         }
     ]
