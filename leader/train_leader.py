@@ -6,7 +6,6 @@ import argparse
 from functools import partial
 
 import torch as tc
-import numpy as np
 
 from rl2.envs.stackelberg.follower_env import FollowerEnv, IteratedMatrixGame
 
@@ -26,6 +25,12 @@ from rl2.utils.comm_util import get_comm, sync_state
 from rl2.utils.constants import ROOT_RANK
 from rl2.utils.optim_util import get_weight_decay_param_groups
 
+from leader.single_agent import SingleAgentLeaderWrapper
+
+from stable_baselines3 import PPO
+
+import wandb
+from wandb.integration.sb3 import WandbCallback
 
 def create_argparser():
     parser = argparse.ArgumentParser(description="""Training script for RL^2.""")
@@ -189,51 +194,17 @@ def create_net(
     raise NotImplementedError
 
 
-def main():
-    args = create_argparser().parse_args()
+def train(args, leader_env, follower_policy_net):
+    
     comm = get_comm()
 
-    # create env.
-    env = create_env(environment=args.environment, max_episode_len=args.max_episode_len)
-
-    # create learning system.
-    policy_net = create_net(
-        net_type="policy",
-        environment=args.environment,
-        architecture=args.architecture,
-        num_states=env.num_states,
-        num_actions=env.num_actions,
-        num_episodes_per_trial=int(args.meta_episode_len / args.max_episode_len),
-        episode_len=args.max_episode_len,
-        num_features=args.num_features,
-        context_size=args.meta_episode_len,
-    )
-
-    value_net = create_net(
-        net_type="value",
-        environment=args.environment,
-        architecture=args.architecture,
-        num_states=env.num_states,
-        num_actions=env.num_actions,
-        num_features=args.num_features,
-        num_episodes_per_trial=int(args.meta_episode_len / args.max_episode_len),
-        episode_len=args.max_episode_len,
-        context_size=args.meta_episode_len,
-    )
-
-    policy_optimizer = tc.optim.AdamW(
-        get_weight_decay_param_groups(policy_net, args.adam_wd),
-        lr=args.adam_lr,
-        eps=args.adam_eps,
-    )
-    value_optimizer = tc.optim.AdamW(
-        get_weight_decay_param_groups(value_net, args.adam_wd),
+    follower_policy_optimizer = tc.optim.AdamW(
+        get_weight_decay_param_groups(follower_policy_net, args.adam_wd),
         lr=args.adam_lr,
         eps=args.adam_eps,
     )
 
-    policy_scheduler = None
-    value_scheduler = None
+    follower_policy_scheduler = None
 
     # load checkpoint, if applicable.
     pol_iters_so_far = 0
@@ -241,80 +212,75 @@ def main():
         a = maybe_load_checkpoint(
             checkpoint_dir=args.checkpoint_dir,
             model_name=f"{args.model_name}/policy_net",
-            model=policy_net,
-            optimizer=policy_optimizer,
-            scheduler=policy_scheduler,
+            model=follower_policy_net,
+            optimizer=follower_policy_optimizer,
+            scheduler=follower_policy_scheduler,
             steps=None,
         )
 
-        b = maybe_load_checkpoint(
-            checkpoint_dir=args.checkpoint_dir,
-            model_name=f"{args.model_name}/value_net",
-            model=value_net,
-            optimizer=value_optimizer,
-            scheduler=value_scheduler,
-            steps=None,
-        )
-
-        if a != b:
-            raise RuntimeError(
-                "Policy and value iterates not aligned in latest checkpoint!"
-            )
         pol_iters_so_far = a
 
     # sync state.
     pol_iters_so_far = comm.bcast(pol_iters_so_far, root=ROOT_RANK)
     sync_state(
-        model=policy_net,
-        optimizer=policy_optimizer,
-        scheduler=policy_scheduler,
-        comm=comm,
-        root=ROOT_RANK,
-    )
-    sync_state(
-        model=value_net,
-        optimizer=value_optimizer,
-        scheduler=value_scheduler,
+        model=follower_policy_net,
+        optimizer=follower_policy_optimizer,
+        scheduler=follower_policy_scheduler,
         comm=comm,
         root=ROOT_RANK,
     )
 
-    env._leader_response = [0,0,0,1,1]
-    ol_tm1 = np.array([0])
-    al_tm1 = np.array([0])
-    obs = np.array([env.reset()])
-    hidden = policy_net.initial_state(batch_size=1)
-    for t in range(args.meta_episode_len):
+    
 
-        ep_t = np.array([int(t / args.max_episode_len)])
-        st_t = np.array([t % args.max_episode_len])
+    leader_run = wandb.init(project="rl2-matgame-leader", sync_tensorboard=True)
+    leader_model = PPO(
+        "MlpPolicy", leader_env, verbose=1, tensorboard_log=f"runs/{leader_run.id}"
+    )
+    leader_model.learn(
+        total_timesteps=300_000,
+        callback=WandbCallback(gradient_save_freq=100, verbose=2),
+    )
+    leader_model.save("checkpoints/leader_ppo")
 
-        pi_dist, hidden = policy_net(
-            prev_leader_obs=tc.LongTensor(ol_tm1),
-            prev_leader_action=tc.LongTensor(al_tm1),
-            episode=tc.LongTensor(ep_t),
-            step_in_episode=tc.LongTensor(st_t),
-            curr_obs=tc.LongTensor(obs),
-            prev_state=hidden
-        )
-        action = tc.atleast_1d(tc.argmax(pi_dist.probs))
+def test(leader_env):
 
-        al_t, obs_next, reward, done, _ = env.step(
-            action=action.squeeze(0).detach().numpy(),
-            auto_reset=True
-        )
+    leader_model = PPO.load("checkpoints/leader_ppo", env=leader_env)
+    # play a single episode to check learned leader and follower policies
+    obs, _ = leader_env.reset()
+    while True:
+        action = leader_model.predict(obs, deterministic=True)[0]
+        new_obs, rewards, terminated, truncated, _ = leader_env.step(action)
+        print(obs, action, rewards)
+        obs = new_obs
 
-        if t < (args.meta_episode_len - args.max_episode_len):
-            reward = 0
+        if terminated or truncated:
+            break
 
-        print(obs[0], al_t, action.squeeze(0).item(), obs_next, reward)
-        
-        al_tm1 = np.array([al_t])
-        ol_tm1 = obs
-        obs = obs_next
-        obs = np.array([obs])
-        reward = np.array([reward])
-        done = np.array([float(done)])
+if __name__ == "__main__":
 
-if __name__ == '__main__':
-    main()
+    args = create_argparser().parse_args()
+    
+    follower_env = create_env(environment=args.environment, max_episode_len=args.max_episode_len)
+
+    follower_policy_net = create_net(
+        net_type="policy",
+        environment=args.environment,
+        architecture=args.architecture,
+        num_states=follower_env.num_states,
+        num_actions=follower_env.num_actions,
+        num_episodes_per_trial=int(args.meta_episode_len / args.max_episode_len),
+        episode_len=args.max_episode_len,
+        num_features=args.num_features,
+        context_size=args.meta_episode_len,
+    )
+
+    leader_env = SingleAgentLeaderWrapper(
+        follower_env._env,
+        queries=[0, 1, 2, 3, 4],
+        follower_model=follower_policy_net,
+        last_episode_in_trial=int(args.meta_episode_len / args.max_episode_len) - 1
+    )
+
+    # train(args, leader_env, follower_policy_net)
+
+    test(leader_env)

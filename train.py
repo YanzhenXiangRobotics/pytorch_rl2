@@ -7,8 +7,6 @@ from functools import partial
 
 import torch as tc
 
-from rl2.envs.bandit_env import BanditEnv
-from rl2.envs.mdp_env import MDPEnv
 from rl2.envs.stackelberg.follower_env import FollowerEnv, IteratedMatrixGame
 
 from rl2.agents.preprocessing.tabular import MABPreprocessing, MDPPreprocessing
