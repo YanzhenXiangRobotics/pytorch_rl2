@@ -37,6 +37,7 @@ class FollowerEnv(MetaEpisodicEnv):
             self._env.action_space("leader").sample() \
             for _ in range(self._env.observation_space("follower").n)
         ]
+        # self._leader_response = [0, 0, 0, 1, 1]
 
     def new_env(self) -> None:
         """
@@ -58,22 +59,15 @@ class FollowerEnv(MetaEpisodicEnv):
         self._state = self._env.reset()["follower"]
         return self._state
 
-    def step(self, action, auto_reset=True) -> Tuple[int, float, bool, dict]:
-        """
-        Take action in the MDP, and observe next state, reward, done, etc.
-
-        Args:
-            action: action corresponding to an arm index.
-            auto_reset: auto reset. if true, new_state will be from self.reset()
-
-        Returns:
-            new_state, reward, done, info.
-        """
+    def step(self, action, auto_reset=True):
 
         al_t = self._leader_response[self._state]
         
         s_tp1, r_t, done_t, _, _  = self._env.step({"leader": al_t,
                                                     "follower": action})
         self._state = s_tp1["follower"]
+
+        if done_t["follower"] and auto_reset:
+            self._state = self.reset()
 
         return al_t, self._state, r_t["follower"], done_t["follower"], {}

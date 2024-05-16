@@ -88,6 +88,10 @@ def generate_meta_episode(
         al_t, o_tp1, r_t, done_t, _ = env.step(
             action=a_t.squeeze(0).detach().numpy(),
             auto_reset=True)
+        
+        # Zero out reward
+        if (t < meta_episode_len - episode_len):
+            r_t = 0
 
         meta_episode.leader_acs[t] = al_t
         meta_episode.eps[t] = ep_t

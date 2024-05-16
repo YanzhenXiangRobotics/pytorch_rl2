@@ -22,15 +22,14 @@
             "console": "integratedTerminal",
             "args": ["--environment",
                     "matrix_game",
-                    // "tabular_mdp",
                     "--max_episode_len",
-                    "5",
+                    "30",
                     "--meta_episode_len",
-                    "15",
+                    "120",
                     "--meta_episodes_per_policy_update",
                     "3",
-                    "--architecture",
-                    "transformer"
+                    // "--architecture",
+                    // "transformer"
                     ]
         },
         {
@@ -43,13 +42,13 @@
                     "matrix_game",
                     // "tabular_mdp",
                     "--max_episode_len",
-                    "5",
+                    "30",
                     "--meta_episode_len",
-                    "15",
+                    "120",
                     "--meta_episodes_per_policy_update",
                     "1",
-                    "--architecture",
-                    "transformer"
+                    // "--architecture",
+                    // "transformer"
                     ]
         }
     ]

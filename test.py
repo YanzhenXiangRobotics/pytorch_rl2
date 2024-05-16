@@ -306,6 +306,9 @@ def main():
             auto_reset=True
         )
 
+        if t < (args.meta_episode_len - args.max_episode_len):
+            reward = 0
+
         print(obs[0], al_t, action.squeeze(0).item(), obs_next, reward)
         
         al_tm1 = np.array([al_t])
