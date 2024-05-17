@@ -195,42 +195,7 @@ def create_net(
     raise NotImplementedError
 
 
-def train(args, leader_env, follower_policy_net):
-    
-    comm = get_comm()
-
-    follower_policy_optimizer = tc.optim.AdamW(
-        get_weight_decay_param_groups(follower_policy_net, args.adam_wd),
-        lr=args.adam_lr,
-        eps=args.adam_eps,
-    )
-
-    follower_policy_scheduler = None
-
-    # load checkpoint, if applicable.
-    pol_iters_so_far = 0
-    if comm.Get_rank() == ROOT_RANK:
-        a = maybe_load_checkpoint(
-            checkpoint_dir=args.checkpoint_dir,
-            model_name=f"{args.model_name}/policy_net",
-            model=follower_policy_net,
-            optimizer=follower_policy_optimizer,
-            scheduler=follower_policy_scheduler,
-            steps=None,
-        )
-
-        pol_iters_so_far = a
-
-    # sync state.
-    pol_iters_so_far = comm.bcast(pol_iters_so_far, root=ROOT_RANK)
-    sync_state(
-        model=follower_policy_net,
-        optimizer=follower_policy_optimizer,
-        scheduler=follower_policy_scheduler,
-        comm=comm,
-        root=ROOT_RANK,
-    )
-
+def train(args, leader_env):
     
 
     leader_run = wandb.init(project="rl2-matgame-leader", sync_tensorboard=True)
@@ -278,6 +243,40 @@ if __name__ == "__main__":
         context_size=args.meta_episode_len,
     )
 
+    comm = get_comm()
+
+    follower_policy_optimizer = tc.optim.AdamW(
+        get_weight_decay_param_groups(follower_policy_net, args.adam_wd),
+        lr=args.adam_lr,
+        eps=args.adam_eps,
+    )
+
+    follower_policy_scheduler = None
+
+    # load checkpoint, if applicable.
+    pol_iters_so_far = 0
+    if comm.Get_rank() == ROOT_RANK:
+        a = maybe_load_checkpoint(
+            checkpoint_dir=args.checkpoint_dir,
+            model_name=f"{args.model_name}/policy_net",
+            model=follower_policy_net,
+            optimizer=follower_policy_optimizer,
+            scheduler=follower_policy_scheduler,
+            steps=None,
+        )
+
+        pol_iters_so_far = a
+
+    # sync state.
+    pol_iters_so_far = comm.bcast(pol_iters_so_far, root=ROOT_RANK)
+    sync_state(
+        model=follower_policy_net,
+        optimizer=follower_policy_optimizer,
+        scheduler=follower_policy_scheduler,
+        comm=comm,
+        root=ROOT_RANK,
+    )
+
     leader_env = follower_env._env
     leader_env = SingleAgentLeaderWrapper(
         leader_env,
@@ -287,6 +286,6 @@ if __name__ == "__main__":
         episode_len=args.max_episode_len,
     )
 
-    # train(args, leader_env, follower_policy_net)
+    # train(args, leader_env)
 
     test(leader_env)

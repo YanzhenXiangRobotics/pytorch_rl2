@@ -288,7 +288,6 @@ def main():
 
         ep_t = np.array([int(t / args.max_episode_len)])
         st_t = np.array([t % args.max_episode_len])
-
         pi_dist, hidden = policy_net(
             prev_leader_obs=tc.LongTensor(ol_tm1),
             prev_leader_action=tc.LongTensor(al_tm1),

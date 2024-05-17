@@ -53,12 +53,14 @@ class SingleAgentLeaderWrapper(gym.Env):
         self.current_step += 1
         self.prev_leader_action = action
 
-        # print("follower ", 
-        #       self.prev_leader_obs, 
-        #       self.prev_leader_action,
-        #       int((self.current_step - 1) / self.episode_len),
-        #       (self.current_step - 1) % self.episode_len,
-        #       self.prev_follower_obs)
+        # if self.current_step <= 2:
+        #     print("follower ", 
+        #         self.prev_leader_obs, 
+        #         self.prev_leader_action,
+        #         int((self.current_step - 1) / self.episode_len),
+        #         (self.current_step - 1) % self.episode_len,
+        #         self.prev_follower_obs,
+        #         self.prev_state)
 
         pi_dist_t, self.prev_state = self.follower_model(
             prev_leader_obs=tc.LongTensor(np.array([self.prev_leader_obs])),
@@ -67,7 +69,7 @@ class SingleAgentLeaderWrapper(gym.Env):
             step_in_episode=tc.LongTensor(np.array([(self.current_step - 1) % self.episode_len])),
             curr_obs=tc.LongTensor(np.array([self.prev_follower_obs])
                                    ),
-            prev_state=self.prev_state,
+            prev_state=self.prev_state.clone().detach(),
         )
         follower_action = tc.argmax(pi_dist_t.probs).item()
         actions = {
