@@ -34,11 +34,13 @@ class SingleAgentLeaderWrapper(gym.Env):
         self.current_step = 0
 
     def reset(self, seed=None, options=None):
+
+        self.prev_leader_obs = 0
+        self.prev_leader_action = 0
         self.current_step = 0
         self.prev_state = self.follower_model.initial_state(batch_size=1)
         obs = self.env.reset()
-        self.prev_follower_obs = obs["follower"]
-        self.prev_leader_obs = obs["leader"]
+        self.follower_obs = obs["follower"]
 
         return obs["leader"], {}
     
@@ -51,23 +53,13 @@ class SingleAgentLeaderWrapper(gym.Env):
     def step(self, action, auto_reset=True):
 
         self.current_step += 1
-        self.prev_leader_action = action
-
-        # if self.current_step <= 2:
-        #     print("follower ", 
-        #         self.prev_leader_obs, 
-        #         self.prev_leader_action,
-        #         int((self.current_step - 1) / self.episode_len),
-        #         (self.current_step - 1) % self.episode_len,
-        #         self.prev_follower_obs,
-        #         self.prev_state)
 
         pi_dist_t, self.prev_state = self.follower_model(
             prev_leader_obs=tc.LongTensor(np.array([self.prev_leader_obs])),
             prev_leader_action=tc.LongTensor(np.array([self.prev_leader_action])),
             episode=tc.LongTensor(np.array([int((self.current_step - 1) / self.episode_len)])),
             step_in_episode=tc.LongTensor(np.array([(self.current_step - 1) % self.episode_len])),
-            curr_obs=tc.LongTensor(np.array([self.prev_follower_obs])
+            curr_obs=tc.LongTensor(np.array([self.follower_obs])
                                    ),
             prev_state=self.prev_state.clone().detach(),
         )
@@ -75,7 +67,7 @@ class SingleAgentLeaderWrapper(gym.Env):
         actions = {
             "leader": action,
             "follower": follower_action,
-        }
+        }   
 
         obs, reward, term, trunc, info = self.env.step(actions)
 
@@ -84,9 +76,12 @@ class SingleAgentLeaderWrapper(gym.Env):
 
         if auto_reset and term["leader"]:
             obs["leader"], _ = self._inner_reset()
+
+        # print(self.current_step - 1, self.prev_leader_obs, action, follower_action, obs["leader"], reward["leader"])
         
-        self.prev_follower_obs = obs["follower"]
-        self.prev_leader_obs = obs["leader"]
+        self.prev_leader_obs = self.follower_obs
+        self.prev_leader_action = action
+        self.follower_obs = obs["follower"]
 
         return (
             obs["leader"],

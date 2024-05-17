@@ -6,6 +6,7 @@ import argparse
 from functools import partial
 
 import torch as tc
+import numpy as np
 
 from rl2.envs.stackelberg.follower_env import FollowerEnv, IteratedMatrixGame
 
@@ -84,7 +85,7 @@ def create_argparser():
     parser.add_argument("--adam_lr", type=float, default=2e-4)
     parser.add_argument("--adam_eps", type=float, default=1e-5)
     parser.add_argument("--adam_wd", type=float, default=0.01)
-    parser.add_argument("--resume", default=True, action="store_true")
+    parser.add_argument("--resume", default=False, action="store_true")
     return parser
 
 
@@ -200,13 +201,19 @@ def train(args, leader_env):
 
     leader_run = wandb.init(project="rl2-matgame-leader", sync_tensorboard=True)
     leader_model = PPO(
-        "MlpPolicy", leader_env, verbose=1, tensorboard_log=f"runs/{leader_run.id}"
+        "MlpPolicy", 
+        leader_env, 
+        verbose=1, 
+        tensorboard_log=f"runs/{leader_run.id}", 
+        gamma=0.9999
+        # learning_rate=1e-2,
+        # ent_coef=1e-2,
     )
     if args.resume:
         print("Resuming...\n")
         leader_model = PPO.load("checkpoints/leader_ppo", env=leader_env)
     leader_model.learn(
-        total_timesteps=60_000,
+        total_timesteps=80_000,
         callback=WandbCallback(gradient_save_freq=100, verbose=2),
     )
     leader_model.save("checkpoints/leader_ppo")
@@ -285,6 +292,42 @@ if __name__ == "__main__":
         meta_episode_len=args.meta_episode_len,
         episode_len=args.max_episode_len,
     )
+
+    # follower_env._leader_response = [1,0,0,1,1]
+    # ol_tm1 = np.array([0])
+    # al_tm1 = np.array([0])
+    # obs = np.array([follower_env.reset()])
+    # hidden = follower_policy_net.initial_state(batch_size=1)
+    # for t in range(args.meta_episode_len):
+
+    #     ep_t = np.array([int(t / args.max_episode_len)])
+    #     st_t = np.array([t % args.max_episode_len])
+    #     pi_dist, hidden = follower_policy_net(
+    #         prev_leader_obs=tc.LongTensor(ol_tm1),
+    #         prev_leader_action=tc.LongTensor(al_tm1),
+    #         episode=tc.LongTensor(ep_t),
+    #         step_in_episode=tc.LongTensor(st_t),
+    #         curr_obs=tc.LongTensor(obs),
+    #         prev_state=hidden
+    #     )
+    #     action = tc.atleast_1d(tc.argmax(pi_dist.probs))
+
+    #     al_t, obs_next, reward, done, _ = follower_env.step(
+    #         action=action.squeeze(0).detach().numpy(),
+    #         auto_reset=True
+    #     )
+
+    #     if t < (args.meta_episode_len - args.max_episode_len):
+    #         reward = 0
+
+    #     print(t, obs[0], al_t, action.squeeze(0).item(), obs_next, reward)
+        
+    #     al_tm1 = np.array([al_t])
+    #     ol_tm1 = obs
+    #     obs = obs_next
+    #     obs = np.array([obs])
+    #     reward = np.array([reward])
+    #     done = np.array([float(done)])
 
     # train(args, leader_env)
 
