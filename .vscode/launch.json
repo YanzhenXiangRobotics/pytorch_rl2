@@ -65,6 +65,7 @@
                     "120",
                     "--meta_episodes_per_policy_update",
                     "3",
+                    "--resume"
                     // "--architecture",
                     // "transformer"
                     ]

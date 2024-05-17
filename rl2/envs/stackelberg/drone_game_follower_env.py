@@ -9,7 +9,7 @@ from rl2.envs.abstract import MetaEpisodicEnv
 from rl2.envs.stackelberg.matrix_game import IteratedMatrixGame
 
 
-class FollowerEnv(MetaEpisodicEnv):
+class DroneGameFollowerEnv(MetaEpisodicEnv):
     def __init__(self, env: IteratedMatrixGame):
         self._env = env
 

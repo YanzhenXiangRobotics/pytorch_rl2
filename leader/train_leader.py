@@ -84,6 +84,7 @@ def create_argparser():
     parser.add_argument("--adam_lr", type=float, default=2e-4)
     parser.add_argument("--adam_eps", type=float, default=1e-5)
     parser.add_argument("--adam_wd", type=float, default=0.01)
+    parser.add_argument("--resume", default=True, action="store_true")
     return parser
 
 
@@ -236,8 +237,11 @@ def train(args, leader_env, follower_policy_net):
     leader_model = PPO(
         "MlpPolicy", leader_env, verbose=1, tensorboard_log=f"runs/{leader_run.id}"
     )
+    if args.resume:
+        print("Resuming...\n")
+        leader_model = PPO.load("checkpoints/leader_ppo", env=leader_env)
     leader_model.learn(
-        total_timesteps=300_000,
+        total_timesteps=60_000,
         callback=WandbCallback(gradient_save_freq=100, verbose=2),
     )
     leader_model.save("checkpoints/leader_ppo")
@@ -274,11 +278,14 @@ if __name__ == "__main__":
         context_size=args.meta_episode_len,
     )
 
+    leader_env = follower_env._env
+    leader_env.episode_length -= 1
     leader_env = SingleAgentLeaderWrapper(
-        follower_env._env,
+        leader_env,
         queries=[0, 1, 2, 3, 4],
         follower_model=follower_policy_net,
-        last_episode_in_trial=int(args.meta_episode_len / args.max_episode_len) - 1
+        meta_episode_len=args.meta_episode_len,
+        episode_len=args.max_episode_len,
     )
 
     # train(args, leader_env, follower_policy_net)
