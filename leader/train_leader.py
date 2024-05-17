@@ -254,7 +254,7 @@ def test(leader_env):
     while True:
         action = leader_model.predict(obs, deterministic=True)[0]
         new_obs, rewards, terminated, truncated, _ = leader_env.step(action)
-        print(obs, action, rewards)
+        print(leader_env.current_step, obs, action, rewards)
         obs = new_obs
 
         if terminated or truncated:
@@ -279,7 +279,6 @@ if __name__ == "__main__":
     )
 
     leader_env = follower_env._env
-    leader_env.episode_length -= 1
     leader_env = SingleAgentLeaderWrapper(
         leader_env,
         queries=[0, 1, 2, 3, 4],

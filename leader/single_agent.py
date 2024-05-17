@@ -43,7 +43,6 @@ class SingleAgentLeaderWrapper(gym.Env):
         return obs["leader"], {}
     
     def _inner_reset(self):
-        self.current_step += 1
         curr_step = self.current_step
         obs_leader, _ = self.reset()
         self.current_step = curr_step
@@ -66,7 +65,8 @@ class SingleAgentLeaderWrapper(gym.Env):
             prev_leader_action=tc.LongTensor(np.array([self.prev_leader_action])),
             episode=tc.LongTensor(np.array([int((self.current_step - 1) / self.episode_len)])),
             step_in_episode=tc.LongTensor(np.array([(self.current_step - 1) % self.episode_len])),
-            curr_obs=tc.LongTensor(np.array([self.prev_follower_obs])),
+            curr_obs=tc.LongTensor(np.array([self.prev_follower_obs])
+                                   ),
             prev_state=self.prev_state,
         )
         follower_action = tc.argmax(pi_dist_t.probs).item()
@@ -77,18 +77,11 @@ class SingleAgentLeaderWrapper(gym.Env):
 
         obs, reward, term, trunc, info = self.env.step(actions)
 
-        term_meta_episode = False
-        if self.current_step >= self.meta_episode_len:
-            term_meta_episode = True
-
-        if auto_reset and term["leader"]:
-            obs_leader, _ = self._inner_reset()
-            if self.current_step >= self.meta_episode_len:
-                term_meta_episode = True
-            return obs_leader, 0, term_meta_episode, False, {}
-
         if self.current_step <= (self.meta_episode_len - self.episode_len):
             reward["leader"] = 0
+
+        if auto_reset and term["leader"]:
+            obs["leader"], _ = self._inner_reset()
         
         self.prev_follower_obs = obs["follower"]
         self.prev_leader_obs = obs["leader"]
@@ -96,7 +89,7 @@ class SingleAgentLeaderWrapper(gym.Env):
         return (
             obs["leader"],
             reward["leader"],
-            term_meta_episode,
+            self.current_step >= self.meta_episode_len,
             trunc["leader"],
             info["leader"],
         )

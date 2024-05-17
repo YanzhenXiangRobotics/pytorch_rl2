@@ -279,7 +279,7 @@ def main():
         root=ROOT_RANK,
     )
 
-    env._leader_response = [0,0,0,1,1]
+    env._leader_response = [1,0,0,1,1]
     ol_tm1 = np.array([0])
     al_tm1 = np.array([0])
     obs = np.array([env.reset()])
@@ -307,7 +307,7 @@ def main():
         if t < (args.meta_episode_len - args.max_episode_len):
             reward = 0
 
-        print(obs[0], al_t, action.squeeze(0).item(), obs_next, reward)
+        print(t, obs[0], al_t, action.squeeze(0).item(), obs_next, reward)
         
         al_tm1 = np.array([al_t])
         ol_tm1 = obs
