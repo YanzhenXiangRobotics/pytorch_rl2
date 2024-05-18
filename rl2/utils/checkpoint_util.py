@@ -6,6 +6,8 @@ import os
 
 import torch as tc
 
+from rl2.utils.constants import DEVICE
+
 
 def _format_name(kind, steps):
     filename = f"{kind}_{steps}.pth"
@@ -108,10 +110,10 @@ def maybe_load_checkpoint(
         optim_path = os.path.join(base_path, _format_name('optimizer', steps))
         sched_path = os.path.join(base_path, _format_name('scheduler', steps))
 
-        model.load_state_dict(tc.load(model_path))
-        optimizer.load_state_dict(tc.load(optim_path))
+        model.load_state_dict(tc.load(model_path, map_location=DEVICE))
+        optimizer.load_state_dict(tc.load(optim_path, map_location=DEVICE))
         if scheduler is not None:
-            scheduler.load_state_dict(tc.load(sched_path))
+            scheduler.load_state_dict(tc.load(sched_path, map_location=DEVICE))
 
         print(f"Loaded checkpoint from {base_path}, with step {steps}.")
         print("Continuing from checkpoint.")
