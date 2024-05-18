@@ -29,8 +29,6 @@
                     "15",
                     "--meta_episodes_per_policy_update",
                     "3",
-                    "--log_wandb",
-                    "true"
                     ]
         },
         {
@@ -85,9 +83,7 @@
                     "30",
                     "--meta_episodes_per_policy_update",
                     "3",
-                    // "--resume"
-                    // "--architecture",
-                    // "transformer"
+                    "--log_wandb",
                     ]
         },
     ]
