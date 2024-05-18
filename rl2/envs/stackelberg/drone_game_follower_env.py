@@ -5,12 +5,14 @@ Implements the Tabular MDP environment(s) from Duan et al., 2016
 
 from typing import Tuple
 
-from rl2.envs.abstract import MetaEpisodicEnv
-from rl2.envs.stackelberg.matrix_game import IteratedMatrixGame
+import numpy as np
 
-class FollowerEnv(MetaEpisodicEnv):
+from rl2.envs.abstract import MetaEpisodicEnv
+from rl2.envs.stackelberg.drone_game import DroneGame
+
+class DroneGameFollowerEnv(MetaEpisodicEnv):
     
-    def __init__(self, env: IteratedMatrixGame):
+    def __init__(self, env: DroneGame):
 
         self._env = env
         
@@ -24,18 +26,20 @@ class FollowerEnv(MetaEpisodicEnv):
 
     @property
     def num_actions(self):
-        """Get self._num_actions."""
         return self._env.action_space("follower").n
 
     @property
     def num_states(self):
-        """Get self._num_states."""
-        return self._env.observation_space("follower").n
+        return self._env.observation_space("follower").nvec.tolist()
+    
+    @property
+    def dim_states(self):
+        return [2, len(self._env.observation_space("follower").nvec) - 2]
 
     def _new_leader_policy(self):
         self._leader_response = [
             self._env.action_space("leader").sample() \
-            for _ in range(self._env.observation_space("leader").n)
+            for _ in range(2 ** self._env.observation_space("leader").n)
         ]
 
     def new_env(self) -> None:
