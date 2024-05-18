@@ -28,9 +28,9 @@
                     "--meta_episode_len",
                     "15",
                     "--meta_episodes_per_policy_update",
-                    "1",
-                    "--architecture",
-                    "transformer"
+                    "3",
+                    // "--architecture",
+                    // "transformer"
                     ]
         },
         {
@@ -83,8 +83,8 @@
                     "10",
                     "--meta_episode_len",
                     "30",
-                    // "--meta_episodes_per_policy_update",
-                    // "3",
+                    "--meta_episodes_per_policy_update",
+                    "3",
                     // "--resume"
                     // "--architecture",
                     // "transformer"

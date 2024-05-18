@@ -32,7 +32,7 @@ def create_argparser():
     ### Environment
     parser.add_argument(
         "--environment",
-        choices=["bandit", "tabular_mdp", "matrix_game_follower"],
+        choices=["bandit", "tabular_mdp", "matrix_game_follower", "drone_game_follower"],
         default="bandit",
     )
     parser.add_argument(

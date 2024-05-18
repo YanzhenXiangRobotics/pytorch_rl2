@@ -74,7 +74,7 @@ def compute_losses(
     prev_state_policy_net = policy_net.initial_state(batch_size=B)
     prev_state_value_net = value_net.initial_state(batch_size=B)
 
-    # forward pass implements unroll for recurrent/attentive architectures.
+# forward pass implements unroll for recurrent/attentive architectures.
     pi_dists, _ = policy_net(
         curr_obs=curr_obs,
         prev_action=prev_action,

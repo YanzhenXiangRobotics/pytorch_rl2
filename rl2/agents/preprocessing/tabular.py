@@ -106,15 +106,15 @@ class DGFPreprocessing(Preprocessing):
         prev_reward: tc.FloatTensor,
         prev_done: tc.FloatTensor,
     ) -> tc.FloatTensor:
-        pos = curr_obs[: self._dim_states[0]]
-        occps = curr_obs[-self._dim_states[1] :]
+        pos = curr_obs[..., : self._dim_states[0]]
+        occps = curr_obs[..., -self._dim_states[1] :]
 
         emb_occps = []
-        for occp in occps:
-            emb_occps.append(one_hot(occp, depth=self._num_states[1]))
+        for k in range(self._dim_states[1]):
+            emb_occps.append(one_hot(tc.atleast_1d(occps[..., k]), depth=self._num_states[2]))
 
         emb_a = one_hot(prev_action, depth=self._num_actions)
         prev_reward = prev_reward.unsqueeze(-1)
         prev_done = prev_done.unsqueeze(-1)
-        vec = tc.cat((pos, *occps, emb_a, prev_reward, prev_done), dim=-1).float()
+        vec = tc.cat((pos, *emb_occps, emb_a, prev_reward, prev_done), dim=-1).float()
         return vec

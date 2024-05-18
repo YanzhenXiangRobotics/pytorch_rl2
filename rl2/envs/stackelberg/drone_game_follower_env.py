@@ -21,6 +21,10 @@ class DroneGameFollowerEnv(MetaEpisodicEnv):
         self._state = 0
 
     @property
+    def name(self):
+        return "drone_game_follower"
+
+    @property
     def max_episode_len(self):
         return self._env.episode_length
 
@@ -74,7 +78,10 @@ class DroneGameFollowerEnv(MetaEpisodicEnv):
             new_state, reward, done, info.
         """
 
-        a_ts = {"leader": self._leader_response[self._state],
+        ol = self._env.get_leader_observation()
+        ol = int("".join(str(int(b)) for b in ol)[::-1], base=2)
+        
+        a_ts = {"leader": self._leader_response[ol],
                "follower": action}
 
         s_tp1s, r_ts, done_ts, _, _  = self._env.step(a_ts)

@@ -144,7 +144,7 @@ class DroneGame(ParallelEnv):
         return {
             "leader": np.zeros(self.env.num_divisions),
             "follower": np.zeros(
-                1 + self.env.agent_view_size * self.env.agent_view_size
+                2 + self.env.agent_view_size * self.env.agent_view_size
             ),
         }
 
@@ -254,8 +254,10 @@ class DroneGame(ParallelEnv):
                 elif isinstance(self.env.grid.get(i, j), Wall):
                     observation[i_local, j_local] = 3
 
-        return np.insert(observation.flatten(), 0, self.env.agent_pos[1])
+        observation = np.insert(observation.flatten(), 0, self.env.agent_pos[0])
+        observation = np.insert(observation, 0, self.env.agent_pos[1])
 
+        return observation
 
 class Drone:
     def __init__(self, env: DroneGameEnv, center: Tuple[int, int], radius=1) -> None:
