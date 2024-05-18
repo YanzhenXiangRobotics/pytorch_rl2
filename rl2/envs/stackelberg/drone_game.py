@@ -11,7 +11,7 @@ import time
 
 import numpy as np
 
-from envs.lava_colored import LavaColored
+from rl2.envs.stackelberg.lava_colored import LavaColored
 
 from minigrid.core.grid import Grid
 from minigrid.core.mission import MissionSpace
@@ -22,7 +22,7 @@ from gymnasium import spaces
 
 from pettingzoo import ParallelEnv
 
-from util.point import Point2D
+from rl2.envs.stackelberg.util.point import Point2D
 
 
 class DroneGameEnv(MiniGridEnv):
@@ -223,16 +223,15 @@ class DroneGame(ParallelEnv):
 
     def follower_act(self, action):
         self.env.render_mode = None
-        match action:
-            case 0:  # fwd
+        if action == 0: # fwd
                 self.env.step(self.env.actions.forward)
-            case 1:  # left
+        elif action == 1:  # left
                 self.env.step(self.env.actions.left)
                 self.env.step(self.env.actions.forward)
                 self.env.step(self.env.actions.right)
                 self.env.step(self.env.actions.forward)
                 self.env.step_count -= 3
-            case 2:  # right
+        elif action == 2:  # right
                 self.env.step(self.env.actions.right)
                 self.env.step(self.env.actions.forward)
                 self.env.step(self.env.actions.left)

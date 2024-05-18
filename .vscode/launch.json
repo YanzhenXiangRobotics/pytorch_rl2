@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "MDP",
+            "name": "tabular mdp",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/train.py",
@@ -15,13 +15,13 @@
                     ]
         },
         {
-            "name": "Training",
+            "name": "matrix game follower training",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/train.py",
             "console": "integratedTerminal",
             "args": ["--environment",
-                    "matrix_game",
+                    "matrix_game_follower",
                     // "tabular_mdp",
                     "--max_episode_len",
                     "5",
@@ -34,13 +34,13 @@
                     ]
         },
         {
-            "name": "Testing",
+            "name": "matrix game follower testing",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/test.py",
             "console": "integratedTerminal",
             "args": ["--environment",
-                    "matrix_game",
+                    "matrix_game_follower",
                     // "tabular_mdp",
                     "--max_episode_len",
                     "5",
@@ -53,13 +53,13 @@
                     ]
         },
         {
-            "name": "Train leader",
+            "name": "matrix game leader training",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/leader/train_leader.py",
+            "program": "${workspaceFolder}/train_leader.py",
             "console": "integratedTerminal",
             "args": ["--environment",
-                    "matrix_game",
+                    "matrix_game_follower",
                     "--max_episode_len",
                     "10",
                     "--meta_episode_len",
@@ -67,6 +67,25 @@
                     // "--meta_episodes_per_policy_update",
                     // "3",
                     "--resume"
+                    // "--architecture",
+                    // "transformer"
+                    ]
+        },
+        {
+            "name": "drone game follower training",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": ["--environment",
+                    "drone_game_follower",
+                    "--max_episode_len",
+                    "10",
+                    "--meta_episode_len",
+                    "30",
+                    // "--meta_episodes_per_policy_update",
+                    // "3",
+                    // "--resume"
                     // "--architecture",
                     // "transformer"
                     ]

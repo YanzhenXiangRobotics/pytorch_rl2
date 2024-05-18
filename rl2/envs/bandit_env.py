@@ -25,6 +25,10 @@ class BanditEnv(MetaEpisodicEnv):
         self.new_env()
 
     @property
+    def name(self):
+        return "bandit"
+
+    @property
     def max_episode_len(self):
         return 1
 

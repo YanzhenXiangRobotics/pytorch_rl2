@@ -31,6 +31,10 @@ class MDPEnv(MetaEpisodicEnv):
         self._state = 0
 
     @property
+    def name(self):
+        return "tabular_mdp"
+
+    @property
     def max_episode_len(self):
         return self._max_ep_length
 

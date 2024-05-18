@@ -7,26 +7,12 @@ from functools import partial
 
 import torch as tc
 
-from rl2.envs.bandit_env import BanditEnv
-from rl2.envs.mdp_env import MDPEnv
-from rl2.envs.stackelberg.follower_env import FollowerEnv
-from rl2.envs.stackelberg.matrix_game import IteratedMatrixGame
-from rl2.envs.stackelberg.drone_game_follower_env import DroneGameFollowerEnv
-from rl2.envs.stackelberg.drone_game import DroneGame, DroneGameEnv
-
-from rl2.agents.preprocessing.tabular import (
-    MABPreprocessing,
-    MDPPreprocessing,
-    DGFPreprocessing,
-)
 from rl2.agents.architectures.gru import GRU
 from rl2.agents.architectures.lstm import LSTM
 from rl2.agents.architectures.snail import SNAIL
 from rl2.agents.architectures.transformer import Transformer
 from rl2.agents.heads.policy_heads import LinearPolicyHead
 from rl2.agents.heads.value_heads import LinearValueHead
-from rl2.agents.integration.policy_net import StatefulPolicyNet
-from rl2.agents.integration.value_net import StatefulValueNet
 from rl2.algos.ppo import training_loop
 
 from rl2.utils.checkpoint_util import maybe_load_checkpoint, save_checkpoint
@@ -46,13 +32,15 @@ def create_argparser():
     ### Environment
     parser.add_argument(
         "--environment",
-        choices=["bandit", "tabular_mdp", "matrix_game"],
+        choices=["bandit", "tabular_mdp", "matrix_game_follower"],
         default="bandit",
     )
     parser.add_argument(
-        "--num_states", type=int, default=10, help="Ignored if environment is bandit."
+        "--num_states", type=int, default=10, help="Only for yabular mdp."
     )
-    parser.add_argument("--num_actions", type=int, default=5)
+    parser.add_argument(
+        "--num_actions", type=int, default=5, help="Only for badit and tabular mdp."
+    )
     parser.add_argument(
         "--max_episode_len",
         type=int,
@@ -94,39 +82,6 @@ def create_argparser():
     parser.add_argument("--adam_wd", type=float, default=0.01)
     return parser
 
-
-def create_env(environment, num_states, num_actions, max_episode_len):
-    if environment == "bandit":
-        return BanditEnv(num_actions=num_actions)
-    if environment == "tabular_mdp":
-        return MDPEnv(
-            num_states=num_states,
-            num_actions=num_actions,
-            max_episode_length=max_episode_len,
-        )
-    if environment == "matrix_game":
-        return FollowerEnv(
-            env=IteratedMatrixGame(
-                matrix="prisoners_dilemma", episode_length=max_episode_len, memory=2
-            )
-        )
-    if environment == "drone_game":
-        return DroneGameFollowerEnv(
-            env=DroneGame(env=DroneGameEnv(agent_start_pos=(1, 10)), headless=True)
-        )
-    raise NotImplementedError
-
-
-def create_preprocessing(environment, num_states, num_actions):
-    if environment == "bandit":
-        return MABPreprocessing(num_actions=num_actions)
-    if (environment == "tabular_mdp") or (environment == "matrix_game"):
-        return MDPPreprocessing(num_states=num_states, num_actions=num_actions)
-    if environment == "drone_game":
-        return DGFPreprocessing(num_states=num_states, num_actions=num_actions)
-    raise NotImplementedError
-
-
 def create_architecture(architecture, input_dim, num_features, context_size):
     if architecture == "gru":
         return GRU(
@@ -165,42 +120,6 @@ def create_head(head_type, num_features, num_actions):
         return LinearValueHead(num_features=num_features)
     raise NotImplementedError
 
-
-def create_net(
-    net_type,
-    environment,
-    architecture,
-    num_states,
-    num_actions,
-    num_features,
-    context_size,
-):
-    preprocessing = create_preprocessing(
-        environment=environment, num_states=num_states, num_actions=num_actions
-    ).to(DEVICE)
-    architecture = create_architecture(
-        architecture=architecture,
-        input_dim=preprocessing.output_dim,
-        num_features=num_features,
-        context_size=context_size,
-    ).to(DEVICE)
-    head = create_head(
-        head_type=net_type,
-        num_features=architecture.output_dim,
-        num_actions=num_actions,
-    ).to(DEVICE)
-
-    if net_type == "policy":
-        return StatefulPolicyNet(
-            preprocessing=preprocessing, architecture=architecture, policy_head=head
-        )
-    if net_type == "value":
-        return StatefulValueNet(
-            preprocessing=preprocessing, architecture=architecture, value_head=head
-        )
-    raise NotImplementedError
-
-
 def main():
     print("Using device:", DEVICE)
 
@@ -209,34 +128,25 @@ def main():
 
     # create env.
     env = create_env(
-        environment=args.environment,
+        name=args.environment,
         num_states=args.num_states,
         num_actions=args.num_actions,
         max_episode_len=args.max_episode_len,
     )
 
     # create learning system.
-    if (args.environment == "bandit") or (args.environment == "tabular_mdp"):
-        num_states, num_actions = args.num_states, args.num_actions
-    elif (args.environment == "matrix_game") or (args.environment == "drone_game"):
-        num_states, num_actions = env.num_states, env.num_actions
-
     policy_net = create_net(
         net_type="policy",
-        environment=args.environment,
+        env=env,
         architecture=args.architecture,
-        num_states=num_states,
-        num_actions=num_actions,
         num_features=args.num_features,
         context_size=args.meta_episode_len,
     )
 
     value_net = create_net(
         net_type="value",
-        environment=args.environment,
+        env=env,
         architecture=args.architecture,
-        num_states=num_states,
-        num_actions=num_actions,
         num_features=args.num_features,
         context_size=args.meta_episode_len,
     )

@@ -8,7 +8,7 @@ from typing import Tuple
 from rl2.envs.abstract import MetaEpisodicEnv
 from rl2.envs.stackelberg.matrix_game import IteratedMatrixGame
 
-class FollowerEnv(MetaEpisodicEnv):
+class MatGameFollowerEnv(MetaEpisodicEnv):
     
     def __init__(self, env: IteratedMatrixGame):
 
@@ -17,6 +17,10 @@ class FollowerEnv(MetaEpisodicEnv):
         self.new_env()
 
         self._state = 0
+
+    @property
+    def name(self):
+        return "matrix_game_follower"
 
     @property
     def max_episode_len(self):

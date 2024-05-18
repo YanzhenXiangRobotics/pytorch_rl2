@@ -1,8 +1,10 @@
 from rl2.envs.bandit_env import BanditEnv
 from rl2.envs.mdp_env import MDPEnv
-from rl2.envs.stackelberg.follower_env import FollowerEnv, IteratedMatrixGame
+from rl2.envs.stackelberg.mat_game_follower_env import MatGameFollowerEnv, IteratedMatrixGame
+from rl2.envs.stackelberg.drone_game_follower_env import DroneGameFollowerEnv, DroneGame
+from rl2.envs.stackelberg.drone_game import DroneGameEnv
 
-from rl2.agents.preprocessing.tabular import MABPreprocessing, MDPPreprocessing
+from rl2.agents.preprocessing.tabular import MABPreprocessing, MDPPreprocessing, DGFPreprocessing
 from rl2.agents.architectures.gru import GRU
 from rl2.agents.architectures.lstm import LSTM
 from rl2.agents.architectures.snail import SNAIL
@@ -15,31 +17,39 @@ from rl2.agents.integration.value_net import StatefulValueNet
 from rl2.utils.constants import DEVICE
 from rl2.utils.checkpoint_util import maybe_load_checkpoint
 
-def create_env(environment, num_states, num_actions, max_episode_len):
-    if environment == 'bandit':
-        return BanditEnv(
-            num_actions=num_actions)
-    if environment == 'tabular_mdp':
+def create_env(name, num_states, num_actions, max_episode_len):
+    if name == "bandit":
+        return BanditEnv(num_actions=num_actions)
+    if name == "tabular_mdp":
         return MDPEnv(
             num_states=num_states,
             num_actions=num_actions,
-            max_episode_length=max_episode_len)
-    if environment == 'matrix_game':
-        return FollowerEnv(
-            env=IteratedMatrixGame(matrix='prisoners_dilemma',
-                                   episode_length=max_episode_len,
-                                   memory=2))
+            max_episode_length=max_episode_len,
+        )
+    if name == "matrix_game_follower":
+        return MatGameFollowerEnv(
+            env=IteratedMatrixGame(
+                matrix="prisoners_dilemma", episode_length=max_episode_len, memory=2
+            )
+        )
+    if name == "drone_game_follower":
+        return DroneGameFollowerEnv(
+            env=DroneGame(env=DroneGameEnv(agent_start_pos=(1, 10)), headless=True)
+        )
     raise NotImplementedError
 
 
-def create_preprocessing(environment, num_states, num_actions):
-    if environment == 'bandit':
-        return MABPreprocessing(
-            num_actions=num_actions)
-    if (environment == 'tabular_mdp') or (environment == 'matrix_game'):
-        return MDPPreprocessing(
-            num_states=num_states,
-            num_actions=num_actions)
+def create_preprocessing(env):
+    if env.name == "bandit":
+        return MABPreprocessing(num_actions=env.num_actions)
+    if (env.name == "tabular_mdp") or (env.name == "matrix_game_follower"):
+        return MDPPreprocessing(num_states=env.num_states, num_actions=env.num_actions)
+    if env.name == "drone_game_follower":
+        return DGFPreprocessing(
+            num_states=env.num_states,
+            dim_states=env.dim_states,
+            num_actions=env.num_actions,
+        )
     raise NotImplementedError
 
 
@@ -85,33 +95,35 @@ def create_head(head_type, num_features, num_actions):
 
 
 def create_net(
-        net_type, environment, architecture, num_states, num_actions,
-        num_features, context_size
+    net_type,
+    env,
+    architecture,
+    num_features,
+    context_size,
 ):
     preprocessing = create_preprocessing(
-        environment=environment,
-        num_states=num_states,
-        num_actions=num_actions).to(DEVICE)
+        env=env,
+    ).to(DEVICE)
     architecture = create_architecture(
         architecture=architecture,
         input_dim=preprocessing.output_dim,
         num_features=num_features,
-        context_size=context_size).to(DEVICE)
+        context_size=context_size,
+    ).to(DEVICE)
     head = create_head(
         head_type=net_type,
         num_features=architecture.output_dim,
-        num_actions=num_actions).to(DEVICE)
+        num_actions=env.num_actions,
+    ).to(DEVICE)
 
-    if net_type == 'policy':
+    if net_type == "policy":
         return StatefulPolicyNet(
-            preprocessing=preprocessing,
-            architecture=architecture,
-            policy_head=head)
-    if net_type == 'value':
+            preprocessing=preprocessing, architecture=architecture, policy_head=head
+        )
+    if net_type == "value":
         return StatefulValueNet(
-            preprocessing=preprocessing,
-            architecture=architecture,
-            value_head=head)
+            preprocessing=preprocessing, architecture=architecture, value_head=head
+        )
     raise NotImplementedError
 
 def get_policy_net_for_inference(args):
