@@ -111,7 +111,8 @@ def maybe_load_checkpoint(
         sched_path = os.path.join(base_path, _format_name('scheduler', steps))
 
         model.load_state_dict(tc.load(model_path, map_location=DEVICE))
-        optimizer.load_state_dict(tc.load(optim_path, map_location=DEVICE))
+        if optimizer is not None:
+            optimizer.load_state_dict(tc.load(optim_path, map_location=DEVICE))
         if scheduler is not None:
             scheduler.load_state_dict(tc.load(sched_path, map_location=DEVICE))
 
