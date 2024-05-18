@@ -58,7 +58,7 @@ def sync_grads(model, comm):
         None
     """
     for p in model.parameters():
-        p_grad_local = p.grad.numpy()
+        p_grad_local = p.grad.cpu().numpy()
         p_grad_global = np.zeros_like(p_grad_local)
         comm.Allreduce(sendbuf=p_grad_local, recvbuf=p_grad_global, op=MPI.SUM)
         p.grad.copy_(tc.FloatTensor(p_grad_global) / comm.Get_size())

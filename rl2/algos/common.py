@@ -9,6 +9,7 @@ import numpy as np
 from rl2.envs.abstract import MetaEpisodicEnv
 from rl2.agents.integration.policy_net import StatefulPolicyNet
 from rl2.agents.integration.value_net import StatefulValueNet
+from rl2.utils.constants import DEVICE
 
 
 class MetaEpisode:
@@ -60,32 +61,32 @@ def generate_meta_episode(
 
     for t in range(0, meta_episode_len):
         pi_dist_t, h_t_policy_net = policy_net(
-            curr_obs=tc.LongTensor(o_t),
-            prev_action=tc.LongTensor(a_tm1),
-            prev_reward=tc.FloatTensor(r_tm1),
-            prev_done=tc.FloatTensor(d_tm1),
+            curr_obs=tc.LongTensor(o_t).to(DEVICE),
+            prev_action=tc.LongTensor(a_tm1).to(DEVICE),
+            prev_reward=tc.FloatTensor(r_tm1).to(DEVICE),
+            prev_done=tc.FloatTensor(d_tm1).to(DEVICE),
             prev_state=h_tm1_policy_net)
 
         vpred_t, h_t_value_net = value_net(
-            curr_obs=tc.LongTensor(o_t),
-            prev_action=tc.LongTensor(a_tm1),
-            prev_reward=tc.FloatTensor(r_tm1),
-            prev_done=tc.FloatTensor(d_tm1),
+            curr_obs=tc.LongTensor(o_t).to(DEVICE),
+            prev_action=tc.LongTensor(a_tm1).to(DEVICE),
+            prev_reward=tc.FloatTensor(r_tm1).to(DEVICE),
+            prev_done=tc.FloatTensor(d_tm1).to(DEVICE),
             prev_state=h_tm1_value_net)
 
         a_t = pi_dist_t.sample()
         log_prob_a_t = pi_dist_t.log_prob(a_t)
 
         o_tp1, r_t, done_t, _ = env.step(
-            action=a_t.squeeze(0).detach().numpy(),
+            action=a_t.squeeze(0).detach().cpu().numpy(),
             auto_reset=True)
 
         meta_episode.obs[t] = o_t[0]
-        meta_episode.acs[t] = a_t.squeeze(0).detach().numpy()
+        meta_episode.acs[t] = a_t.squeeze(0).detach().cpu().numpy()
         meta_episode.rews[t] = r_t
         meta_episode.dones[t] = float(done_t)
-        meta_episode.logpacs[t] = log_prob_a_t.squeeze(0).detach().numpy()
-        meta_episode.vpreds[t] = vpred_t.squeeze(0).detach().numpy()
+        meta_episode.logpacs[t] = log_prob_a_t.squeeze(0).detach().cpu().numpy()
+        meta_episode.vpreds[t] = vpred_t.squeeze(0).detach().cpu().numpy()
 
         o_t = np.array([o_tp1])
         a_tm1 = np.array([meta_episode.acs[t]])
@@ -138,7 +139,7 @@ def huber_func(y_pred, y_true, delta=1.0):
     a_abs = tc.abs(a)
     a2 = tc.square(a)
     terms = tc.where(
-        tc.less(a_abs, delta * tc.ones_like(a2)),
+        tc.less(a_abs, delta * tc.ones_like(a2).to(DEVICE)),
         0.5 * a2,
         delta * (a_abs - 0.5 * delta)
     )

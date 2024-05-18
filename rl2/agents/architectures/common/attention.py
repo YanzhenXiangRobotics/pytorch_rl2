@@ -6,6 +6,8 @@ import functools
 
 import torch as tc
 
+from rl2.utils.constants import DEVICE
+
 
 @functools.lru_cache
 def sinusoidal_embeddings(src_len, d_model, reverse=False):
@@ -44,7 +46,7 @@ def rel_shift(inputs):
     # inputs should be a 3d tensor with shape [B, T2, T1+T2]
     # this function implements the part of the shift from Dai et al., Appdx B
     input_shape = inputs.shape
-    zp = tc.zeros(size=(input_shape[0], input_shape[1], 1), dtype=tc.float32)
+    zp = tc.zeros(size=(input_shape[0], input_shape[1], 1), dtype=tc.float32).to(DEVICE)
     inputs = tc.cat((zp, inputs), dim=2)
     inputs = tc.reshape(
         inputs, [input_shape[0], input_shape[2]+1, input_shape[1]])
@@ -110,10 +112,10 @@ class MultiheadSelfAttention(tc.nn.Module):
             tc.nn.init.xavier_normal_(self._r_linear.weight)
             self._u = tc.nn.Parameter(
                 tc.zeros(size=(self._num_heads * self._num_head_features,),
-                         dtype=tc.float32))
+                         dtype=tc.float32)).to(DEVICE)
             self._v = tc.nn.Parameter(
                 tc.zeros(size=(self._num_heads * self._num_head_features,),
-                         dtype=tc.float32))
+                         dtype=tc.float32)).to(DEVICE)
 
     def attn_preop(self, qs, ks, vs, sampling):
         assert type(qs) == type(ks) == type(vs)
@@ -163,8 +165,8 @@ class MultiheadSelfAttention(tc.nn.Module):
                 else:
                     qs = tc.stack(qs, dim=1)
                     prev_row_shape = [qs.shape[0], self._row_len, qs.shape[2]]
-                    ks = tc.zeros(size=prev_row_shape, dtype=tc.float32)
-                    vs = tc.zeros(size=prev_row_shape, dtype=tc.float32)
+                    ks = tc.zeros(size=prev_row_shape, dtype=tc.float32).to(DEVICE)
+                    vs = tc.zeros(size=prev_row_shape, dtype=tc.float32).to(DEVICE)
                     return qs, ks, vs, qs.shape[0]
             else:
                 assert qs.shape[1] == ks.shape[1] == vs.shape[1]

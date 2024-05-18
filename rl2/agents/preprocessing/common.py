@@ -8,6 +8,8 @@ import abc
 
 import torch as tc
 
+from rl2.utils.constants import DEVICE
+
 
 class Preprocessing(abc.ABC, tc.nn.Module):
     def forward(
@@ -45,7 +47,7 @@ def one_hot(ys: tc.LongTensor, depth: int) -> tc.FloatTensor:
     """
 
     vecs_shape = list(ys.shape) + [depth]
-    vecs = tc.zeros(dtype=tc.float32, size=vecs_shape)
+    vecs = tc.zeros(dtype=tc.float32, size=vecs_shape).to(DEVICE)
     vecs.scatter_(dim=-1, index=ys.unsqueeze(-1),
-                  src=tc.ones(dtype=tc.float32, size=vecs_shape))
+                  src=tc.ones(dtype=tc.float32, size=vecs_shape).to(DEVICE))
     return vecs.float()
