@@ -8,6 +8,7 @@ from collections import deque
 
 import torch as tc
 import numpy as np
+import wandb
 from mpi4py import MPI
 
 from rl2.envs.abstract import MetaEpisodicEnv
@@ -20,10 +21,8 @@ from rl2.algos.common import (
     huber_func,
 )
 from rl2.utils.comm_util import sync_grads
-from rl2.utils.constants import ROOT_RANK
+from rl2.utils.constants import ROOT_RANK, DEVICE
 
-import wandb
-run = wandb.init(project='rl2-matgame')
 
 def compute_losses(
         meta_episodes: List[MetaEpisode],
@@ -50,8 +49,8 @@ def compute_losses(
             list(map(lambda metaep: getattr(metaep, field), meta_episodes)),
             axis=0)
         if dtype == 'long':
-            return tc.LongTensor(mb_field)
-        return tc.FloatTensor(mb_field)
+            return tc.LongTensor(mb_field).to(DEVICE)
+        return tc.FloatTensor(mb_field).to(DEVICE)
 
     # minibatch data tensors
     mb_obs = get_tensor('obs', 'long')
@@ -64,9 +63,9 @@ def compute_losses(
 
     # input for loss calculations
     B = len(meta_episodes)
-    ac_dummy = tc.zeros(dtype=tc.int64, size=(B,))
-    rew_dummy = tc.zeros(dtype=tc.float32, size=(B,))
-    done_dummy = tc.ones(dtype=tc.float32, size=(B,))
+    ac_dummy = tc.zeros(dtype=tc.int64, size=(B,)).to(DEVICE)
+    rew_dummy = tc.zeros(dtype=tc.float32, size=(B,)).to(DEVICE)
+    done_dummy = tc.ones(dtype=tc.float32, size=(B,)).to(DEVICE)
 
     curr_obs = mb_obs
     prev_action = tc.cat((ac_dummy.unsqueeze(1), mb_acs[:, 0:-1]), dim=1)
@@ -144,6 +143,7 @@ def training_loop(
         policy_checkpoint_fn: Callable[[int], None],
         value_checkpoint_fn: Callable[[int], None],
         comm: type(MPI.COMM_WORLD),
+        log_wandb: bool,
     ) -> None:
     """
     Train a stateful RL^2 agent via PPO to maximize discounted cumulative reward
@@ -176,6 +176,9 @@ def training_loop(
     Returns:
         None
     """
+    if comm.Get_rank() == ROOT_RANK:
+        run = wandb.init(project='rl2-matgame', mode="online" if log_wandb else "disabled")
+
     meta_ep_returns = deque(maxlen=1000)
 
     for pol_iter in range(pol_iters_so_far, max_pol_iters):

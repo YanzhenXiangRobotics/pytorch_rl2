@@ -9,6 +9,7 @@ import numpy as np
 
 from rl2.agents.architectures.common.normalization import LayerNorm
 from rl2.agents.architectures.common.attention import MultiheadSelfAttention
+from rl2.utils.constants import DEVICE
 
 
 class CausalConv(tc.nn.Module):
@@ -65,7 +66,7 @@ class CausalConv(tc.nn.Module):
             if t1 < effective_kernel_size - 1:
                 zpl = effective_kernel_size - 1 - t1
                 zps = (batch_size, zpl, self._input_dim)
-                zp = tc.zeros(size=zps, dtype=tc.float32)
+                zp = tc.zeros(size=zps, dtype=tc.float32).to(DEVICE)
                 inputs = tc.cat((zp, past_inputs, inputs), dim=1)
             else:
                 crop_len = effective_kernel_size - 1
@@ -74,7 +75,7 @@ class CausalConv(tc.nn.Module):
         else:
             zpl = effective_kernel_size - 1
             zps = (batch_size, zpl, self._input_dim)
-            zp = tc.zeros(size=zps, dtype=tc.float32)
+            zp = tc.zeros(size=zps, dtype=tc.float32).to(DEVICE)
             inputs = tc.cat((zp, inputs), dim=1)
 
         conv = self._conv(inputs.permute(0, 2, 1)).permute(0, 2, 1)

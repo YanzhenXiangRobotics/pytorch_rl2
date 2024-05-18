@@ -24,13 +24,16 @@ from rl2.algos.ppo import training_loop
 
 from rl2.utils.checkpoint_util import maybe_load_checkpoint, save_checkpoint
 from rl2.utils.comm_util import get_comm, sync_state
-from rl2.utils.constants import ROOT_RANK
+from rl2.utils.constants import ROOT_RANK, DEVICE
 from rl2.utils.optim_util import get_weight_decay_param_groups
 
 
 def create_argparser():
     parser = argparse.ArgumentParser(
         description="""Training script for RL^2.""")
+
+    parser.add_argument("--log_wandb", action='store_true',
+                        help="Whether to use wandb for logging.")
 
     ### Environment
     parser.add_argument("--environment", choices=['bandit', 'tabular_mdp', 'matrix_game'],
@@ -147,16 +150,16 @@ def create_net(
     preprocessing = create_preprocessing(
         environment=environment,
         num_states=num_states,
-        num_actions=num_actions)
+        num_actions=num_actions).to(DEVICE)
     architecture = create_architecture(
         architecture=architecture,
         input_dim=preprocessing.output_dim,
         num_features=num_features,
-        context_size=context_size)
+        context_size=context_size).to(DEVICE)
     head = create_head(
         head_type=net_type,
         num_features=architecture.output_dim,
-        num_actions=num_actions)
+        num_actions=num_actions).to(DEVICE)
 
     if net_type == 'policy':
         return StatefulPolicyNet(
@@ -172,6 +175,8 @@ def create_net(
 
 
 def main():
+    print("Using device:", DEVICE)
+
     args = create_argparser().parse_args()
     comm = get_comm()
 
@@ -219,6 +224,9 @@ def main():
             num_actions=args.num_actions,
             num_features=args.num_features,
             context_size=args.meta_episode_len)
+
+    policy_net = policy_net.to(DEVICE)
+    value_net = value_net.to(DEVICE)
 
     policy_optimizer = tc.optim.AdamW(
         get_weight_decay_param_groups(policy_net, args.adam_wd),
@@ -317,7 +325,8 @@ def main():
         pol_iters_so_far=pol_iters_so_far,
         policy_checkpoint_fn=policy_checkpoint_fn,
         value_checkpoint_fn=value_checkpoint_fn,
-        comm=comm)
+        comm=comm,
+        log_wandb=args.log_wandb)
 
 
 if __name__ == '__main__':

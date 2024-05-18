@@ -12,8 +12,8 @@ class LayerNorm(tc.nn.Module):
     def __init__(self, units):
         super().__init__()
         self._units = units
-        self._g = tc.nn.Parameter(tc.ones(units, device='cpu'))
-        self._b = tc.nn.Parameter(tc.zeros(units, device='cpu'))
+        self._g = tc.nn.Parameter(tc.ones(units))
+        self._b = tc.nn.Parameter(tc.zeros(units))
 
     def forward(self, inputs, eps=1e-8):
         mu = tc.mean(inputs, dim=-1, keepdim=True)

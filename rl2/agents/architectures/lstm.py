@@ -7,6 +7,7 @@ from typing import Tuple
 import torch as tc
 
 from rl2.agents.architectures.common.normalization import LayerNorm
+from rl2.utils.constants import DEVICE
 
 
 class LSTM(tc.nn.Module):
@@ -41,7 +42,7 @@ class LSTM(tc.nn.Module):
             self._x2fioj_ln = LayerNorm(units=(4 * self._hidden_dim))
             self._h2fioj_ln = LayerNorm(units=(4 * self._hidden_dim))
 
-        self._initial_state = tc.zeros(2 * self._hidden_dim)
+        self._initial_state = tc.zeros(2 * self._hidden_dim).to(DEVICE)
 
     def initial_state(self, batch_size: int) -> tc.FloatTensor:
         """

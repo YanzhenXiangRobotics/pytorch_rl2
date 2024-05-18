@@ -7,6 +7,7 @@ from typing import Tuple
 import torch as tc
 
 from rl2.agents.architectures.common.normalization import LayerNorm
+from rl2.utils.constants import DEVICE
 
 
 class GRU(tc.nn.Module):
@@ -59,7 +60,7 @@ class GRU(tc.nn.Module):
             self._x2hhat_ln = LayerNorm(units=self._hidden_dim)
             self._h2hhat_ln = LayerNorm(units=self._hidden_dim)
 
-        self._initial_state = tc.zeros(self._hidden_dim)
+        self._initial_state = tc.zeros(self._hidden_dim).to(DEVICE)
 
     def initial_state(self, batch_size: int) -> tc.FloatTensor:
         """

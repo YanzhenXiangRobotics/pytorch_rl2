@@ -25,7 +25,7 @@ from rl2.algos.ppo import training_loop
 
 from rl2.utils.checkpoint_util import maybe_load_checkpoint, save_checkpoint
 from rl2.utils.comm_util import get_comm, sync_state
-from rl2.utils.constants import ROOT_RANK
+from rl2.utils.constants import ROOT_RANK, DEVICE
 from rl2.utils.optim_util import get_weight_decay_param_groups
 
 
@@ -148,16 +148,16 @@ def create_net(
     preprocessing = create_preprocessing(
         environment=environment,
         num_states=num_states,
-        num_actions=num_actions)
+        num_actions=num_actions).to(DEVICE)
     architecture = create_architecture(
         architecture=architecture,
         input_dim=preprocessing.output_dim,
         num_features=num_features,
-        context_size=context_size)
+        context_size=context_size).to(DEVICE)
     head = create_head(
         head_type=net_type,
         num_features=architecture.output_dim,
-        num_actions=num_actions)
+        num_actions=num_actions).to(DEVICE)
 
     if net_type == 'policy':
         return StatefulPolicyNet(
@@ -220,6 +220,9 @@ def main():
             num_actions=args.num_actions,
             num_features=args.num_features,
             context_size=args.meta_episode_len)
+
+    policy_net = policy_net.to(DEVICE)
+    value_net = value_net.to(DEVICE)
 
     policy_optimizer = tc.optim.AdamW(
         get_weight_decay_param_groups(policy_net, args.adam_wd),
@@ -299,27 +302,29 @@ def main():
 
     env._leader_response = [0,0,0,1,1]
     action = np.array([0])
+    action = tc.LongTensor(action).to(DEVICE)
     reward = np.array([0.0])
     done = np.array([1.0])
     obs = np.array([env.reset()])
     hidden = policy_net.initial_state(batch_size=1)
     for _ in range(args.meta_episode_len):
         pi_dist, hidden = policy_net(
-            curr_obs=tc.LongTensor(obs),
-            prev_action=tc.LongTensor(action),
-            prev_reward=tc.LongTensor(reward),
-            prev_done=tc.FloatTensor(done),
+            curr_obs=tc.LongTensor(obs).to(DEVICE),
+            prev_action=action,
+            prev_reward=tc.FloatTensor(reward).to(DEVICE),
+            prev_done=tc.FloatTensor(done).to(DEVICE),
             prev_state=hidden
         )
         action = tc.atleast_1d(tc.argmax(pi_dist.probs))
         
-        print(obs[0], action.squeeze(0).detach().numpy())
-
-        obs, reward, done, _ = env.step(
-            action=action.squeeze(0).detach().numpy(),
+        new_obs, reward, done, _ = env.step(
+            action=action.squeeze(0).detach().cpu().numpy(),
             auto_reset=True
         )
-        obs = np.array([obs])
+
+        print(obs[0], action.squeeze(0).detach().cpu().numpy(), reward)
+
+        obs = np.array([new_obs])
         reward = np.array([reward])
         done = np.array([float(done)])
     # training_loop(
