@@ -51,6 +51,25 @@
                     "--architecture",
                     "transformer"
                     ]
-        }
+        },
+        {
+            "name": "Train leader",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/leader/train_leader.py",
+            "console": "integratedTerminal",
+            "args": ["--environment",
+                    "matrix_game",
+                    "--max_episode_len",
+                    "10",
+                    "--meta_episode_len",
+                    "30",
+                    // "--meta_episodes_per_policy_update",
+                    // "3",
+                    "--resume"
+                    // "--architecture",
+                    // "transformer"
+                    ]
+        },
     ]
 }
