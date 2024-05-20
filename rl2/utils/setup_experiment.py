@@ -25,7 +25,7 @@ from rl2.utils.constants import DEVICE
 from rl2.utils.checkpoint_util import maybe_load_checkpoint
 
 
-def create_env(name, num_states, num_actions, max_episode_len, headless):
+def create_env(name, max_episode_len, headless, num_states=None, num_actions=None):
     if name == "bandit":
         return BanditEnv(num_actions=num_actions)
     if name == "tabular_mdp":

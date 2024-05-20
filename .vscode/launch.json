@@ -91,8 +91,20 @@
                     // "20",
                     "--meta_episode_len",
                     "60",
-                    "--num_features",
-                    "1024",
+                    // "--num_features",
+                    // "1024",
+                    ]
+        },
+        {
+            "name": "drone game leader training",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train_leader.py",
+            "console": "integratedTerminal",
+            "args": ["--environment",
+                    "drone_game_follower",
+                    "--meta_episode_len",
+                    "60",
                     ]
         },
     ]
