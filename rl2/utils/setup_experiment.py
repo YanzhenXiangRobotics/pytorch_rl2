@@ -1,10 +1,17 @@
 from rl2.envs.bandit_env import BanditEnv
 from rl2.envs.mdp_env import MDPEnv
-from rl2.envs.stackelberg.mat_game_follower_env import MatGameFollowerEnv, IteratedMatrixGame
+from rl2.envs.stackelberg.mat_game_follower_env import (
+    MatGameFollowerEnv,
+    IteratedMatrixGame,
+)
 from rl2.envs.stackelberg.drone_game_follower_env import DroneGameFollowerEnv, DroneGame
 from rl2.envs.stackelberg.drone_game import DroneGameEnv
 
-from rl2.agents.preprocessing.tabular import MABPreprocessing, MDPPreprocessing, DGFPreprocessing
+from rl2.agents.preprocessing.tabular import (
+    MABPreprocessing,
+    MDPPreprocessing,
+    DGFPreprocessing,
+)
 from rl2.agents.architectures.gru import GRU
 from rl2.agents.architectures.lstm import LSTM
 from rl2.agents.architectures.snail import SNAIL
@@ -17,7 +24,8 @@ from rl2.agents.integration.value_net import StatefulValueNet
 from rl2.utils.constants import DEVICE
 from rl2.utils.checkpoint_util import maybe_load_checkpoint
 
-def create_env(name, num_states, num_actions, max_episode_len):
+
+def create_env(name, num_states, num_actions, max_episode_len, headless):
     if name == "bandit":
         return BanditEnv(num_actions=num_actions)
     if name == "tabular_mdp":
@@ -34,7 +42,7 @@ def create_env(name, num_states, num_actions, max_episode_len):
         )
     if name == "drone_game_follower":
         return DroneGameFollowerEnv(
-            env=DroneGame(env=DroneGameEnv(agent_start_pos=(1, 10)), headless=True)
+            env=DroneGame(env=DroneGameEnv(agent_start_pos=(1, 10)), headless=headless)
         )
     raise NotImplementedError
 
@@ -54,43 +62,41 @@ def create_preprocessing(env):
 
 
 def create_architecture(architecture, input_dim, num_features, context_size):
-    if architecture == 'gru':
+    if architecture == "gru":
         return GRU(
             input_dim=input_dim,
             hidden_dim=num_features,
             forget_bias=1.0,
             use_ln=True,
-            reset_after=True)
-    if architecture == 'lstm':
+            reset_after=True,
+        )
+    if architecture == "lstm":
         return LSTM(
-            input_dim=input_dim,
-            hidden_dim=num_features,
-            forget_bias=1.0,
-            use_ln=True)
-    if architecture == 'snail':
+            input_dim=input_dim, hidden_dim=num_features, forget_bias=1.0, use_ln=True
+        )
+    if architecture == "snail":
         return SNAIL(
             input_dim=input_dim,
             feature_dim=num_features,
             context_size=context_size,
-            use_ln=True)
-    if architecture == 'transformer':
+            use_ln=True,
+        )
+    if architecture == "transformer":
         return Transformer(
             input_dim=input_dim,
             feature_dim=num_features,
             n_layer=9,
             n_head=2,
-            n_context=context_size)
+            n_context=context_size,
+        )
     raise NotImplementedError
 
 
 def create_head(head_type, num_features, num_actions):
-    if head_type == 'policy':
-        return LinearPolicyHead(
-            num_features=num_features,
-            num_actions=num_actions)
-    if head_type == 'value':
-        return LinearValueHead(
-            num_features=num_features)
+    if head_type == "policy":
+        return LinearPolicyHead(num_features=num_features, num_actions=num_actions)
+    if head_type == "value":
+        return LinearValueHead(num_features=num_features)
     raise NotImplementedError
 
 
@@ -126,26 +132,16 @@ def create_net(
         )
     raise NotImplementedError
 
-def get_policy_net_for_inference(args):
+
+def get_policy_net_for_inference(args, env):
     # create learning system.
-    if args.environment == 'matrix_game':
-        policy_net = create_net(
-            net_type='policy',
-            environment=args.environment,
-            architecture=args.architecture,
-            num_states=5,
-            num_actions=2,
-            num_features=args.num_features,
-            context_size=args.meta_episode_len)
-    else:
-        policy_net = create_net(
-            net_type='policy',
-            environment=args.environment,
-            architecture=args.architecture,
-            num_states=args.num_states,
-            num_actions=args.num_actions,
-            num_features=args.num_features,
-            context_size=args.meta_episode_len)
+    policy_net = create_net(
+        net_type="policy",
+        env=env,
+        architecture=args.architecture,
+        num_features=args.num_features,
+        context_size=args.meta_episode_len,
+    )
 
     policy_net = policy_net.to(DEVICE)
 
@@ -156,6 +152,7 @@ def get_policy_net_for_inference(args):
         model=policy_net,
         optimizer=None,
         scheduler=None,
-        steps=None)
+        steps=None,
+    )
 
     return policy_net

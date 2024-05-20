@@ -29,6 +29,10 @@ def create_argparser():
         "--log_wandb", action="store_true", help="Whether to use wandb for logging."
     )
 
+    parser.add_argument(
+        "--headless", action="store_true", help="Whether to display GUI. Only for drone game."
+    )
+
     ### Environment
     parser.add_argument(
         "--environment",
@@ -132,6 +136,7 @@ def main():
         num_states=args.num_states,
         num_actions=args.num_actions,
         max_episode_len=args.max_episode_len,
+        headless=args.headless
     )
 
     # create learning system.

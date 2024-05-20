@@ -22,7 +22,6 @@
             "console": "integratedTerminal",
             "args": ["--environment",
                     "matrix_game_follower",
-                    // "tabular_mdp",
                     "--max_episode_len",
                     "5",
                     "--meta_episode_len",
@@ -39,15 +38,10 @@
             "console": "integratedTerminal",
             "args": ["--environment",
                     "matrix_game_follower",
-                    // "tabular_mdp",
                     "--max_episode_len",
                     "5",
                     "--meta_episode_len",
                     "15",
-                    "--meta_episodes_per_policy_update",
-                    "1",
-                    "--architecture",
-                    "transformer"
                     ]
         },
         {
@@ -62,11 +56,7 @@
                     "10",
                     "--meta_episode_len",
                     "30",
-                    // "--meta_episodes_per_policy_update",
-                    // "3",
                     "--resume"
-                    // "--architecture",
-                    // "transformer"
                     ]
         },
         {
@@ -84,6 +74,20 @@
                     "--meta_episodes_per_policy_update",
                     "3",
                     "--log_wandb",
+                    ]
+        },
+        {
+            "name": "drone game follower testing",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/test.py",
+            "console": "integratedTerminal",
+            "args": ["--environment",
+                    "drone_game_follower",
+                    "--max_episode_len",
+                    "5",
+                    "--meta_episode_len",
+                    "15",
                     ]
         },
     ]

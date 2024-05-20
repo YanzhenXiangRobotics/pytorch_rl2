@@ -8,13 +8,14 @@ from rl2.utils.constants import DEVICE
 def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
     # create env.
     env = create_env(
-        environment=args.environment,
+        name=args.environment,
         num_states=args.num_states,
         num_actions=args.num_actions,
-        max_episode_len=args.max_episode_len)
+        max_episode_len=args.max_episode_len,
+        headless=args.headless)
 
     if policy_net is None:
-        policy_net = get_policy_net_for_inference(args)
+        policy_net = get_policy_net_for_inference(args, env)
 
     def evaluate_policy(leader_policy):
         rewards = []
