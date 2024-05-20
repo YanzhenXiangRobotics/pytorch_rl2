@@ -5,6 +5,8 @@ Implements the Tabular MDP environment(s) from Duan et al., 2016
 
 from typing import Tuple
 
+import torch as tc
+
 from rl2.envs.abstract import MetaEpisodicEnv
 from rl2.envs.stackelberg.matrix_game import IteratedMatrixGame
 

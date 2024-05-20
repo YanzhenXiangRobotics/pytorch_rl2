@@ -25,7 +25,7 @@ class SingleAgentLeaderWrapper(gym.Env):
 
     def _get_next_follower_action(self):
         pi_dist, hidden = self.follower_policy_net(
-            curr_obs=tc.LongTensor(self.last_follower_obs).to(DEVICE),
+            curr_obs=self.last_follower_obs,
             prev_action=tc.LongTensor(self.last_follower_action).to(DEVICE),
             prev_reward=tc.FloatTensor(self.last_follower_reward).to(DEVICE),
             prev_done=tc.FloatTensor(self.last_follower_done).to(DEVICE),

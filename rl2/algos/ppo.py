@@ -53,7 +53,7 @@ def compute_losses(
         return tc.FloatTensor(mb_field).to(DEVICE)
 
     # minibatch data tensors
-    mb_obs = get_tensor('obs', 'long')
+    mb_obs = get_tensor('obs')
     mb_acs = get_tensor('acs', 'long')
     mb_rews = get_tensor('rews')
     mb_dones = get_tensor('dones')

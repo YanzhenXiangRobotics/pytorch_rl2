@@ -15,8 +15,8 @@ def create_argparser():
         description="""Training script for RL^2.""")
 
     ### Environment
-    parser.add_argument("--environment", choices=['matrix_game'],
-                        default='matrix_game')
+    parser.add_argument("--environment", choices=['matrix_game_follower'],
+                        default='matrix_game_follower')
     parser.add_argument("--max_episode_len", type=int, default=10,
                         help="Timesteps before automatic episode reset. " +
                              "Ignored if environment is bandit.")

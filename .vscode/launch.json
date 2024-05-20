@@ -73,7 +73,7 @@
                     "30",
                     "--meta_episodes_per_policy_update",
                     "3",
-                    "--log_wandb",
+                    // "--log_wandb",
                     ]
         },
         {

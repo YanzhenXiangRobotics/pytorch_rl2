@@ -61,14 +61,14 @@ def generate_meta_episode(
 
     for t in range(0, meta_episode_len):
         pi_dist_t, h_t_policy_net = policy_net(
-            curr_obs=tc.LongTensor(o_t).to(DEVICE),
+            curr_obs=o_t,
             prev_action=tc.LongTensor(a_tm1).to(DEVICE),
             prev_reward=tc.FloatTensor(r_tm1).to(DEVICE),
             prev_done=tc.FloatTensor(d_tm1).to(DEVICE),
             prev_state=h_tm1_policy_net)
 
         vpred_t, h_t_value_net = value_net(
-            curr_obs=tc.LongTensor(o_t).to(DEVICE),
+            curr_obs=o_t,
             prev_action=tc.LongTensor(a_tm1).to(DEVICE),
             prev_reward=tc.FloatTensor(r_tm1).to(DEVICE),
             prev_done=tc.FloatTensor(d_tm1).to(DEVICE),

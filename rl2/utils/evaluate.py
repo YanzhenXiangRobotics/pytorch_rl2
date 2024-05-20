@@ -29,7 +29,7 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
         hidden = policy_net.initial_state(batch_size=1)
         for _ in range(args.meta_episode_len):
             pi_dist, hidden = policy_net(
-                curr_obs=tc.LongTensor(obs).to(DEVICE),
+                curr_obs=obs,
                 prev_action=tc.LongTensor(action).to(DEVICE),
                 prev_reward=tc.FloatTensor(reward).to(DEVICE),
                 prev_done=tc.FloatTensor(done).to(DEVICE),

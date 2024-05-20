@@ -101,13 +101,12 @@ class DroneGame(ParallelEnv):
     }
 
     def __init__(
-        self, env: DroneGameEnv, headless: bool = False, verbose: bool = False
+        self, env: DroneGameEnv, headless: bool = False
     ) -> None:
         super().__init__()
 
         self.env = env
         self.headless = headless
-        self.verbose = verbose
         if not headless:
             self.env.render_mode = "human"
 
@@ -166,14 +165,13 @@ class DroneGame(ParallelEnv):
         truncated = {"leader": False, "follower": False}
         info = {"leader": {}, "follower": {}}
 
-        if self.verbose:
+        if not self.headless:
             print(f"\n STEP: {self.env.step_count}\n")
             print(f"\nterminated: {terminated}")
             print(f"Leader takes action {actions['leader']}")
             print(f"leader observation: {observations['leader']}")
             print(f"\nFollower takes action {actions['follower']}")
             print(f"follower observation: {observations['follower']}")
-            print(f"follower observation binary: {observations['follower']}")
             print(f"follower reward: {rewards['follower']}")
             print(f"leader reward: {rewards['leader']}")
 
@@ -254,8 +252,8 @@ class DroneGame(ParallelEnv):
                 elif isinstance(self.env.grid.get(i, j), Wall):
                     observation[i_local, j_local] = 3
 
-        observation = np.insert(observation.flatten(), 0, self.env.agent_pos[0])
-        observation = np.insert(observation, 0, self.env.agent_pos[1])
+        observation = np.insert(observation.flatten(), 0, self.env.agent_pos[1] / self.env.height)
+        observation = np.insert(observation, 0, self.env.agent_pos[0] / self.env.width)
 
         return observation
 
@@ -313,7 +311,7 @@ class Drone:
 if __name__ == "__main__":
     # env = DroneGameEnv(agent_start_pos=(3, 10), agent_dir_fixed=True)
     env = DroneGameEnv(agent_start_pos=(1, 10), agent_dir_fixed=True, agent_start_dir=0)
-    env = DroneGame(env=env, verbose=True)
+    env = DroneGame(env=env)
 
     follower_action_seq = [0, 0, 0, 0, 0, 2, 2, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0]
 
