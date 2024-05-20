@@ -44,16 +44,20 @@ def compute_losses(
     Returns:
         loss_dict: a dictionary of losses.
     """
-    def get_tensor(field, dtype=None):
+    def get_array(field):
         mb_field = np.stack(
             list(map(lambda metaep: getattr(metaep, field), meta_episodes)),
             axis=0)
+        return mb_field
+    
+    def get_tensor(field, dtype=None):
+        mb_field = get_array(field)
         if dtype == 'long':
             return tc.LongTensor(mb_field).to(DEVICE)
         return tc.FloatTensor(mb_field).to(DEVICE)
 
     # minibatch data tensors
-    mb_obs = get_tensor('obs')
+    mb_obs = get_array('obs')
     mb_acs = get_tensor('acs', 'long')
     mb_rews = get_tensor('rews')
     mb_dones = get_tensor('dones')

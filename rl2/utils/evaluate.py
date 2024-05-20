@@ -27,7 +27,7 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
         done = np.array([1.0])
         obs = np.array([env.reset()])
         hidden = policy_net.initial_state(batch_size=1)
-        for _ in range(args.meta_episode_len):
+        for t in range(args.meta_episode_len):
             pi_dist, hidden = policy_net(
                 curr_obs=obs,
                 prev_action=tc.LongTensor(action).to(DEVICE),

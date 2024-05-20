@@ -5,8 +5,6 @@ Implements the Tabular MDP environment(s) from Duan et al., 2016
 
 from typing import Tuple
 
-import numpy as np
-
 from rl2.envs.abstract import MetaEpisodicEnv
 from rl2.envs.stackelberg.drone_game import DroneGame
 
@@ -45,6 +43,11 @@ class DroneGameFollowerEnv(MetaEpisodicEnv):
             self._env.action_space("leader").sample() \
             for _ in range(2 ** self._env.observation_space("leader").n)
         ]
+        # self._leader_response = [
+        #     3 \
+        #     for _ in range(2 ** self._env.observation_space("leader").n)
+        # ]
+        # self._leader_response = [0, 3, 3, 0, 3, 0, 3, 0, 0, 3, 0, 3, 0, 3, 0, 3]
 
     def new_env(self) -> None:
         """

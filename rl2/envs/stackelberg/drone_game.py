@@ -28,24 +28,24 @@ from rl2.envs.stackelberg.util.point import Point2D
 class DroneGameEnv(MiniGridEnv):
     def __init__(
         self,
-        size=22,
-        agent_start_pos=None,
+        width=23,
+        height=22,
+        agent_start_pos=(1, 10),
         agent_start_dir=0,
         agent_dir_fixed=True,
         agent_view_size=3,
-        max_steps: int | None = None,
         drone_options: List = [(15, 3), (15, 8), (15, 13), (15, 18)],
         num_divisions=4,
         drone_cover_size=3,
         **kwargs,
     ):
-        if agent_start_pos is None:
-            self.agent_start_pos = (
-                np.random.randint(1, min(int(0.7 * size), size - 1)),
-                np.random.randint(1, size - 1),
-            )
-        else:
-            self.agent_start_pos = agent_start_pos
+        # if agent_start_pos is None:
+        #     self.agent_start_pos = (
+        #         np.random.randint(1, min(int(0.7 * size), size - 1)),
+        #         np.random.randint(1, size - 1),
+        #     )
+        # else:
+        self.agent_start_pos = agent_start_pos
         self.agent_start_dir = agent_start_dir
         self.agent_dir_fixed = agent_dir_fixed
         self.agent_view_size = agent_view_size
@@ -55,12 +55,12 @@ class DroneGameEnv(MiniGridEnv):
 
         mission_space = MissionSpace(mission_func=self._gen_mission)
 
-        if max_steps is None:
-            max_steps = 4 * size**2
+        max_steps = 4 * width**2
 
         super().__init__(
             mission_space=mission_space,
-            grid_size=size,
+            width=width,
+            height=height,
             agent_view_size=agent_view_size,
             # Set this to True for maximum speed
             see_through_walls=True,
@@ -77,8 +77,8 @@ class DroneGameEnv(MiniGridEnv):
 
         self.grid.wall_rect(0, 0, width, height)
 
-        for j in range(1, self.width - 1):
-            self.put_obj(Goal(), self.height - 2, j)
+        for j in range(1, self.height - 1):
+            self.put_obj(Goal(), self.width - 2, j)
 
         # if self.agent_start_pos is not None:
         self.agent_pos = self.agent_start_pos
@@ -100,9 +100,7 @@ class DroneGame(ParallelEnv):
         "name": "drone_game",
     }
 
-    def __init__(
-        self, env: DroneGameEnv, headless: bool = False
-    ) -> None:
+    def __init__(self, env: DroneGameEnv, headless: bool = False) -> None:
         super().__init__()
 
         self.env = env
@@ -158,9 +156,12 @@ class DroneGame(ParallelEnv):
         rewards["leader"] = self.get_leader_reward()
         rewards["follower"] = -rewards["leader"]
 
-        terminated = (self.env.agent_pos[0] == self.env.height - 2) or isinstance(
-            self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1]), LavaColored
+        terminated = isinstance(
+            self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1]), Goal
         )
+        # ) or isinstance(
+        #     self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1]), LavaColored
+        # )
         terminated = {"leader": terminated, "follower": terminated}
         truncated = {"leader": False, "follower": False}
         info = {"leader": {}, "follower": {}}
@@ -221,20 +222,20 @@ class DroneGame(ParallelEnv):
 
     def follower_act(self, action):
         self.env.render_mode = None
-        if action == 0: # fwd
-                self.env.step(self.env.actions.forward)
+        if action == 0:  # fwd
+            self.env.step(self.env.actions.forward)
         elif action == 1:  # left
-                self.env.step(self.env.actions.left)
-                self.env.step(self.env.actions.forward)
-                self.env.step(self.env.actions.right)
-                self.env.step(self.env.actions.forward)
-                self.env.step_count -= 3
+            self.env.step(self.env.actions.left)
+            self.env.step(self.env.actions.forward)
+            self.env.step(self.env.actions.right)
+            self.env.step(self.env.actions.forward)
+            self.env.step_count -= 3
         elif action == 2:  # right
-                self.env.step(self.env.actions.right)
-                self.env.step(self.env.actions.forward)
-                self.env.step(self.env.actions.left)
-                self.env.step(self.env.actions.forward)
-                self.env.step_count -= 3
+            self.env.step(self.env.actions.right)
+            self.env.step(self.env.actions.forward)
+            self.env.step(self.env.actions.left)
+            self.env.step(self.env.actions.forward)
+            self.env.step_count -= 3
         self.env.render_mode = "human" if not self.headless else None
 
     def get_follower_observation(self):
@@ -252,10 +253,13 @@ class DroneGame(ParallelEnv):
                 elif isinstance(self.env.grid.get(i, j), Wall):
                     observation[i_local, j_local] = 3
 
-        observation = np.insert(observation.flatten(), 0, self.env.agent_pos[1] / self.env.height)
+        observation = np.insert(
+            observation.flatten(), 0, self.env.agent_pos[1] / self.env.height
+        )
         observation = np.insert(observation, 0, self.env.agent_pos[0] / self.env.width)
 
         return observation
+
 
 class Drone:
     def __init__(self, env: DroneGameEnv, center: Tuple[int, int], radius=1) -> None:

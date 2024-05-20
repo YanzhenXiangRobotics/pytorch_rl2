@@ -2,7 +2,7 @@
 Implements preprocessing for tabular MABs and MDPs.
 """
 
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import torch as tc
@@ -121,5 +121,4 @@ class DGFPreprocessing(Preprocessing):
         prev_reward = prev_reward.unsqueeze(-1)
         prev_done = prev_done.unsqueeze(-1)
         vec = tc.cat((pos, *emb_occps, emb_a, prev_reward, prev_done), dim=-1).float()
-        print(vec.tolist())
         return vec
