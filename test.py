@@ -62,7 +62,8 @@ def main():
             args,
             verbose=True,
             # leader_policy=[0, 3, 3, 0, 3, 0, 3, 0, 0, 3, 0, 3, 0, 3, 0, 3],
-        leader_policy=[0 for _ in range(16)]
+            leader_policy=[1, 2, 2, 2, 1, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 2]
+        # leader_policy=[0 for _ in range(16)]
         )
 
 

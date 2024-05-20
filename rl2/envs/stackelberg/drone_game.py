@@ -216,7 +216,7 @@ class DroneGame(ParallelEnv):
         if isinstance(
             self.env.grid.get(self.env.agent_pos[0], self.env.agent_pos[1]), LavaColored
         ):
-            return 5 * self.env.height
+            return 1
 
         return 0
 
