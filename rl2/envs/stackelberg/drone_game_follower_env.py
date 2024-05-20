@@ -8,14 +8,12 @@ from typing import Tuple
 from rl2.envs.abstract import MetaEpisodicEnv
 from rl2.envs.stackelberg.drone_game import DroneGame
 
+
 class DroneGameFollowerEnv(MetaEpisodicEnv):
-    
     def __init__(self, env: DroneGame):
-
-        self._env = env
         
+        self._env = env
         self.new_env()
-
         self._state = 0
 
     @property
@@ -33,14 +31,21 @@ class DroneGameFollowerEnv(MetaEpisodicEnv):
     @property
     def num_states(self):
         return self._env.observation_space("follower").nvec.tolist()
-    
+
     @property
     def dim_states(self):
-        return [2, len(self._env.observation_space("follower").nvec) - 2]
+        dim_states = [
+            2,
+            self._env.env.agent_view_size * self._env.env.agent_view_size,
+            self._env.env.num_divisions,
+            1,
+        ]
+        assert sum(dim_states) == len(self._env.observation_space("follower").nvec)
+        return dim_states
 
     def _new_leader_policy(self):
         self._leader_response = [
-            self._env.action_space("leader").sample() \
+            self._env.action_space("leader").sample()
             for _ in range(2 ** self._env.observation_space("leader").n)
         ]
         # self._leader_response = [
@@ -83,11 +88,10 @@ class DroneGameFollowerEnv(MetaEpisodicEnv):
 
         ol = self._env.get_leader_observation()
         ol = int("".join(str(int(b)) for b in ol)[::-1], base=2)
-        
-        a_ts = {"leader": self._leader_response[ol],
-               "follower": action}
 
-        s_tp1s, r_ts, done_ts, _, _  = self._env.step(a_ts)
+        a_ts = {"leader": self._leader_response[ol], "follower": action}
+
+        s_tp1s, r_ts, done_ts, _, _ = self._env.step(a_ts)
         s_tp1 = s_tp1s["follower"]
         self._state = s_tp1
 

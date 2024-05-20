@@ -124,7 +124,13 @@ class DroneGame(ParallelEnv):
         self.observation_spaces = {
             "leader": spaces.MultiBinary(self.env.num_divisions),
             "follower": spaces.MultiDiscrete(
-                [self.env.height, self.env.width, *([4] * agent_view_area)]
+                [
+                    self.env.height,
+                    self.env.width,
+                    *([4] * agent_view_area),
+                    *([2] * self.env.num_divisions),
+                    len(self.env.drone_options),
+                ]
             ),
         }
 
@@ -141,7 +147,7 @@ class DroneGame(ParallelEnv):
         return {
             "leader": np.zeros(self.env.num_divisions),
             "follower": np.zeros(
-                2 + self.env.agent_view_size * self.env.agent_view_size
+                len(self.observation_space("follower").nvec)
             ),
         }
 
@@ -152,7 +158,9 @@ class DroneGame(ParallelEnv):
 
         observations, rewards = {}, {}
         observations["leader"] = self.get_leader_observation()
-        observations["follower"] = self.get_follower_observation()
+        observations["follower"] = self.get_follower_observation(
+            observations["leader"], actions["leader"]
+        )
         rewards["leader"] = self.get_leader_reward()
         rewards["follower"] = -rewards["leader"]
 
@@ -238,7 +246,7 @@ class DroneGame(ParallelEnv):
             self.env.step_count -= 3
         self.env.render_mode = "human" if not self.headless else None
 
-    def get_follower_observation(self):
+    def get_follower_observation(self, leader_observation, leader_action):
         topX, topY, botX, botY = self.env.get_view_exts()
 
         observation = np.zeros((self.env.agent_view_size, self.env.agent_view_size))
@@ -257,6 +265,9 @@ class DroneGame(ParallelEnv):
             observation.flatten(), 0, self.env.agent_pos[1] / self.env.height
         )
         observation = np.insert(observation, 0, self.env.agent_pos[0] / self.env.width)
+
+        observation = np.concatenate((observation, leader_observation), axis=-1)
+        observation = np.append(observation, leader_action)
 
         return observation
 

@@ -98,6 +98,8 @@ class DGFPreprocessing(Preprocessing):
         return (
             self._dim_states[0]
             + self._dim_states[1] * self._num_states[2]
+            + self._dim_states[2]
+            + self._dim_states[3] * self._num_states[-1]
             + self._num_actions
             + 2
         )
@@ -109,16 +111,38 @@ class DGFPreprocessing(Preprocessing):
         prev_reward: tc.FloatTensor,
         prev_done: tc.FloatTensor,
     ) -> tc.FloatTensor:
-        
         pos = tc.FloatTensor(curr_obs[..., : self._dim_states[0]]).to(DEVICE)
-        occps = tc.LongTensor(curr_obs[..., -self._dim_states[1] :]).to(DEVICE)
+        occps = tc.LongTensor(
+            curr_obs[
+                ..., self._dim_states[0] : self._dim_states[0] + self._dim_states[1]
+            ]
+        ).to(DEVICE)
 
         emb_occps = []
         for k in range(self._dim_states[1]):
-            emb_occps.append(one_hot(tc.atleast_1d(occps[..., k]), depth=self._num_states[2]))
+            emb_occps.append(
+                one_hot(tc.atleast_1d(occps[..., k]), depth=self._num_states[2])
+            )
+
+        ol = tc.LongTensor(
+            curr_obs[
+                ...,
+                self._dim_states[0] + self._dim_states[1] : sum(self._dim_states[0:3]),
+            ]
+        ).to(DEVICE)
+
+        al = one_hot(
+            tc.LongTensor(
+                np.atleast_1d(np.squeeze(curr_obs[..., -self._dim_states[-1] :]))
+            ).to(DEVICE),
+            depth=self._num_states[-1],
+        )
 
         emb_a = one_hot(prev_action, depth=self._num_actions)
         prev_reward = prev_reward.unsqueeze(-1)
         prev_done = prev_done.unsqueeze(-1)
-        vec = tc.cat((pos, *emb_occps, emb_a, prev_reward, prev_done), dim=-1).float()
+        vec = tc.cat(
+            (pos, *emb_occps, ol, al, emb_a, prev_reward, prev_done), dim=-1
+        ).float()
+
         return vec

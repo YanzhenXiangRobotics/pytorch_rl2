@@ -73,8 +73,8 @@
                     "60",
                     "--meta_episodes_per_policy_update",
                     "3",
-                    "--num_features",
-                    "1024",
+                    // "--num_features",
+                    // "1024",
                     "--log_wandb",
                     "--headless",
                     ]
