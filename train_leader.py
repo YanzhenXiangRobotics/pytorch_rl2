@@ -45,28 +45,18 @@ def create_argparser():
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints")
     return parser
 
-
-def main():
+def train(env, args):
 
     run = wandb.init(project="rl2-leader", sync_tensorboard=True)
-
-    args = create_argparser().parse_args()
-
-    follower_env = create_env(
-        name=args.environment,
-        max_episode_len=args.max_episode_len,
-        headless=True,
-    )
-
-    policy_net = get_policy_net_for_inference(args, follower_env)
-
-    env = TrialWrapper(follower_env._env, num_episodes=3)
-    env = SingleAgentLeaderWrapper(env, follower_policy_net=policy_net)
 
     model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}",)
     model.learn(total_timesteps=600_000, callback=WandbCallback(gradient_save_freq=100, verbose=2))
 
     model.save(f"checkpoints/leader_ppo_{args.environment}")
+
+def test(env, args):
+
+    model = PPO.load(f"checkpoints/leader_ppo_{args.environment}")
 
     if args.environment == "drone_game_follower":
         env.env.env.headless = False
@@ -93,6 +83,20 @@ def main():
         ]
         print(leader_policy)
 
-
 if __name__ == "__main__":
-    main()
+    
+    args = create_argparser().parse_args()
+
+    follower_env = create_env(
+        name=args.environment,
+        max_episode_len=args.max_episode_len,
+        headless=True,
+    )
+
+    policy_net = get_policy_net_for_inference(args, follower_env)
+
+    env = TrialWrapper(follower_env._env, num_episodes=3)
+    env = SingleAgentLeaderWrapper(env, follower_policy_net=policy_net)
+
+    # env = train(env, args)
+    test(env, args)
