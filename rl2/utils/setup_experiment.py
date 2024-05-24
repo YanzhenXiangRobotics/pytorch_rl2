@@ -25,24 +25,33 @@ from rl2.utils.constants import DEVICE
 from rl2.utils.checkpoint_util import maybe_load_checkpoint
 
 
-def create_env(name, max_episode_len, headless, num_states=None, num_actions=None):
-    if name == "bandit":
-        return BanditEnv(num_actions=num_actions)
-    if name == "tabular_mdp":
+def create_env(config):
+    if config.env.name == "bandit":
+        return BanditEnv(num_actions=config.bandit.num_actions)
+    if config.env.name == "tabular_mdp":
         return MDPEnv(
-            num_states=num_states,
-            num_actions=num_actions,
-            max_episode_length=max_episode_len,
+            num_states=config.mdp.num_states,
+            num_actions=config.mdp.num_actions,
+            max_episode_length=config.mdp.episode_len,
         )
-    if name == "matrix_game_follower":
+    if config.env.name == "matrix_game_follower":
         return MatGameFollowerEnv(
             env=IteratedMatrixGame(
-                matrix="prisoners_dilemma", episode_length=max_episode_len, memory=2
+                matrix="prisoners_dilemma",
+                episode_length=config.matrix_game.episode_len,
+                memory=config.matrix_game.memory,
             )
         )
-    if name == "drone_game_follower":
+    if config.env.name == "drone_game_follower":
         return DroneGameFollowerEnv(
-            env=DroneGame(env=DroneGameEnv(agent_start_pos=(1, 10)), headless=headless)
+            env=DroneGame(
+                env=DroneGameEnv(
+                    width=config.drone_game.width,
+                    height=config.drone_game.height,
+                    drone_dist=config.drone_game.drone_dist,
+                ),
+                headless=config.drone_game.headless,
+            )
         )
     raise NotImplementedError
 

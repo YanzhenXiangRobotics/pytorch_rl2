@@ -30,13 +30,11 @@ class DroneGameEnv(MiniGridEnv):
         self,
         width=23,
         height=22,
-        agent_start_pos=(1, 10),
         agent_start_dir=0,
         agent_dir_fixed=True,
         agent_view_size=3,
-        drone_options: List = [(15, 3), (15, 8), (15, 13), (15, 18)],
-        num_divisions=4,
         drone_cover_size=3,
+        drone_dist=5,
         **kwargs,
     ):
         # if agent_start_pos is None:
@@ -45,12 +43,17 @@ class DroneGameEnv(MiniGridEnv):
         #         np.random.randint(1, size - 1),
         #     )
         # else:
-        self.agent_start_pos = agent_start_pos
+        self.agent_start_pos = (1, int((height - 2) / 2))
         self.agent_start_dir = agent_start_dir
         self.agent_dir_fixed = agent_dir_fixed
         self.agent_view_size = agent_view_size
-        self.drone_options = drone_options
-        self.num_divisions = num_divisions
+        
+        self.drone_options = []
+        drone_ys = np.arange(3, height + 1, step=drone_dist)
+        for y in drone_ys:
+            self.drone_options.append((width - 8, y))
+
+        self.num_divisions = len(self.drone_options)
         self.drone_cover_size = drone_cover_size
 
         mission_space = MissionSpace(mission_func=self._gen_mission)
@@ -195,7 +198,7 @@ class DroneGame(ParallelEnv):
         self.drones.append(Drone(env=self.env, radius=1, center=drone_place))
 
     def transition_drones(self):
-        if len(self.drones) >= 4:
+        if len(self.drones) >= self.env.num_divisions:
             dead_drone = self.drones.pop(0)
             dead_drone.undo_lava()
             del dead_drone

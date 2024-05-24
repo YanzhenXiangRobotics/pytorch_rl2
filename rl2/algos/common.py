@@ -26,9 +26,9 @@ class MetaEpisode:
 
     def add_step(self, obs, ac, rew, done, logpac, vpred):
         if self.horizon == 0:
-            self.obs = np.array([obs])
+            self.obs = obs
         else:
-            self.obs = np.append(self.obs, obs)
+            self.obs = np.append(self.obs, obs, axis=0)
         self.acs = np.append(self.acs, ac)
         self.rews = np.append(self.rews, rew)
         self.dones = np.append(self.dones, done)
@@ -94,7 +94,7 @@ def generate_meta_episode(
             auto_reset=True)
 
         meta_episode.add_step(
-            obs=o_t[0],
+            obs=o_t,
             ac=a_t.squeeze(0).detach().cpu().numpy(),
             rew=r_t,
             done=float(done_t),

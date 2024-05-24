@@ -1,0 +1,43 @@
+env:
+  name: "bandit"
+  num_meta_episodes: 3
+
+model:
+  architecture: "gru"
+  num_features: 256
+  model_name: "defaults"
+  checkpoint_dir: "checkpoints"
+
+training:
+  max_pol_iters: 12000
+  meta_episodes_per_policy_update: 3
+  meta_episodes_per_learner_batch: 60
+  ppo_opt_epochs: 8
+  ppo_clip_param: 0.10
+  ppo_ent_coef: 0.01
+  discount_gamma: 0.99
+  gae_lambda: 0.3
+  standardize_advs: 0
+  adam_lr: 2.0e-4
+  adam_eps: 1.0e-5
+  adam_wd: 0.01
+  log_wandb: True
+
+bandit:
+  num_actions: 5
+  episode_len: 10
+
+mdp:
+  num_states: 10
+  num_actions: 5
+  episode_len: 10
+
+matrix_game:
+  memory: 2
+  episode_len: 10
+
+drone_game:
+  width: 63
+  height: 62
+  drone_dist: 5
+  headless: True
