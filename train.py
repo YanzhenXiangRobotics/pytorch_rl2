@@ -53,7 +53,7 @@ def create_argparser():
         + "Ignored if environment is bandit.",
     )
     parser.add_argument(
-        "--meta_episode_len", type=int, default=100, help="Timesteps per meta-episode."
+        "--num_meta_episodes", type=int, default=3, help="Episode per meta-episode."
     )
 
     ### Architecture
@@ -145,7 +145,7 @@ def main():
         env=env,
         architecture=args.architecture,
         num_features=args.num_features,
-        context_size=args.meta_episode_len,
+        context_size=0,
     )
 
     value_net = create_net(
@@ -153,7 +153,7 @@ def main():
         env=env,
         architecture=args.architecture,
         num_features=args.num_features,
-        context_size=args.meta_episode_len,
+        context_size=0,
     )
 
     policy_net = policy_net.to(DEVICE)
@@ -239,7 +239,7 @@ def main():
     # run it!
     if args.meta_episodes_per_policy_update == -1:
         numer = 240000
-        denom = comm.Get_size() * args.meta_episode_len
+        denom = comm.Get_size() * args.num_meta_episodes * args.max_episode_len
         meta_episodes_per_policy_update = numer // denom
     else:
         meta_episodes_per_policy_update = args.meta_episodes_per_policy_update
@@ -254,7 +254,7 @@ def main():
         value_scheduler=value_scheduler,
         meta_episodes_per_policy_update=meta_episodes_per_policy_update,
         meta_episodes_per_learner_batch=args.meta_episodes_per_learner_batch,
-        meta_episode_len=args.meta_episode_len,
+        num_meta_episodes=args.num_meta_episodes,
         ppo_opt_epochs=args.ppo_opt_epochs,
         ppo_clip_param=args.ppo_clip_param,
         ppo_ent_coef=args.ppo_ent_coef,

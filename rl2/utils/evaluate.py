@@ -27,7 +27,10 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
         done = np.array([1.0])
         obs = np.array([env.reset()])
         hidden = policy_net.initial_state(batch_size=1)
-        for t in range(args.meta_episode_len):
+
+        current_episode = 0
+
+        while True:
             pi_dist, hidden = policy_net(
                 curr_obs=obs,
                 prev_action=tc.LongTensor(action).to(DEVICE),
@@ -51,6 +54,11 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
             action = action.detach().cpu().numpy()
             reward = np.array([reward])
             done = np.array([float(done)])
+
+            if done:
+                current_episode += 1
+                if current_episode >= args.num_meta_episodes:
+                    break
         
         return np.sum(rewards)
 

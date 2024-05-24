@@ -13,24 +13,36 @@ from rl2.utils.constants import DEVICE
 
 
 class MetaEpisode:
-    def __init__(self, num_timesteps, dummy_obs):
-        self.horizon = num_timesteps
-        self.obs = np.array([dummy_obs for _ in range(self.horizon)])
-        self.acs = np.zeros(self.horizon, 'int64')
-        self.rews = np.zeros(self.horizon, 'float32')
-        self.dones = np.zeros(self.horizon, 'float32')
-        self.logpacs = np.zeros(self.horizon, 'float32')
-        self.vpreds = np.zeros(self.horizon, 'float32')
-        self.advs = np.zeros(self.horizon, 'float32')
-        self.tdlam_rets = np.zeros(self.horizon, 'float32')
+    def __init__(self):
+        self.horizon = 0
+        self.obs = np.array([])
+        self.acs = np.array([], dtype='int64')
+        self.rews = np.array([], dtype='float32')
+        self.dones = np.array([], dtype='float32')
+        self.logpacs = np.array([], dtype='float32')
+        self.vpreds = np.array([], dtype='float32')
+        self.advs = np.array([], dtype='float32')
+        self.tdlam_rets = np.array([], dtype='float32')
 
+    def add_step(self, obs, ac, rew, done, logpac, vpred):
+        if self.horizon == 0:
+            self.obs = np.array([obs])
+        else:
+            self.obs = np.append(self.obs, obs)
+        self.acs = np.append(self.acs, ac)
+        self.rews = np.append(self.rews, rew)
+        self.dones = np.append(self.dones, done)
+        self.logpacs = np.append(self.logpacs, logpac)
+        self.vpreds = np.append(self.vpreds, vpred)
+
+        self.horizon += 1
 
 @tc.no_grad()
 def generate_meta_episode(
         env: MetaEpisodicEnv,
         policy_net: StatefulPolicyNet,
         value_net: StatefulValueNet,
-        meta_episode_len: int
+        num_episodes: int
     ) -> MetaEpisode:
     """
     Generates a meta-episode: a sequence of episodes concatenated together,
@@ -41,16 +53,14 @@ def generate_meta_episode(
         env: environment.
         policy_net: policy network.
         value_net: value network.
-        meta_episode_len: timesteps per meta-episode.
+        num_episodes: episodes per trial.
 
     Returns:
         meta_episode: an instance of the meta-episode class.
     """
 
     env.new_env()
-    meta_episode = MetaEpisode(
-        num_timesteps=meta_episode_len,
-        dummy_obs=env.reset())
+    meta_episode = MetaEpisode()
 
     o_t = np.array([env.reset()])
     a_tm1 = np.array([0])
@@ -59,7 +69,9 @@ def generate_meta_episode(
     h_tm1_policy_net = policy_net.initial_state(batch_size=1)
     h_tm1_value_net = value_net.initial_state(batch_size=1)
 
-    for t in range(0, meta_episode_len):
+    current_episode = 0
+
+    while True:
         pi_dist_t, h_t_policy_net = policy_net(
             curr_obs=o_t,
             prev_action=tc.LongTensor(a_tm1).to(DEVICE),
@@ -81,19 +93,25 @@ def generate_meta_episode(
             action=a_t.squeeze(0).detach().cpu().numpy(),
             auto_reset=True)
 
-        meta_episode.obs[t] = o_t[0]
-        meta_episode.acs[t] = a_t.squeeze(0).detach().cpu().numpy()
-        meta_episode.rews[t] = r_t
-        meta_episode.dones[t] = float(done_t)
-        meta_episode.logpacs[t] = log_prob_a_t.squeeze(0).detach().cpu().numpy()
-        meta_episode.vpreds[t] = vpred_t.squeeze(0).detach().cpu().numpy()
+        meta_episode.add_step(
+            obs=o_t[0],
+            ac=a_t.squeeze(0).detach().cpu().numpy(),
+            rew=r_t,
+            done=float(done_t),
+            logpac=log_prob_a_t.squeeze(0).detach().cpu().numpy(),
+            vpred=vpred_t.squeeze(0).detach().cpu().numpy())
 
         o_t = np.array([o_tp1])
-        a_tm1 = np.array([meta_episode.acs[t]])
-        r_tm1 = np.array([meta_episode.rews[t]])
-        d_tm1 = np.array([meta_episode.dones[t]])
+        a_tm1 = np.array([meta_episode.acs[-1]])
+        r_tm1 = np.array([meta_episode.rews[-1]])
+        d_tm1 = np.array([meta_episode.dones[-1]])
         h_tm1_policy_net = h_t_policy_net
         h_tm1_value_net = h_t_value_net
+
+        if done_t:
+            current_episode += 1
+            if current_episode >= num_episodes:
+                break
 
     return meta_episode
 
@@ -120,6 +138,10 @@ def assign_credit(
         meta_episode: an instance of the meta-episode class,
         with generalized advantage estimates and td lambda returns computed.
     """
+
+    meta_episode.advs = np.zeros_like(meta_episode.acs, dtype='float32')
+    meta_episode.tdlam_rets = np.zeros_like(meta_episode.acs, dtype='float32')
+
     T = len(meta_episode.acs)
     for t in reversed(range(0, T)):  # T-1, ..., 0.
         r_t = meta_episode.rews[t]

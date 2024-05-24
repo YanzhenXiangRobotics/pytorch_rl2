@@ -140,7 +140,7 @@ def get_policy_net_for_inference(args, env):
         env=env,
         architecture=args.architecture,
         num_features=args.num_features,
-        context_size=args.meta_episode_len,
+        context_size=0,
     )
 
     policy_net = policy_net.to(DEVICE)

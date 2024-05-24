@@ -135,7 +135,7 @@ def training_loop(
         value_scheduler: Optional[tc.optim.lr_scheduler._LRScheduler],  # pylint: disable=W0212
         meta_episodes_per_policy_update: int,
         meta_episodes_per_learner_batch: int,
-        meta_episode_len: int,
+        num_meta_episodes: int,
         ppo_opt_epochs: int,
         ppo_clip_param: float,
         ppo_ent_coef: float,
@@ -164,7 +164,7 @@ def training_loop(
         meta_episodes_per_policy_update: meta-episodes per policy improvement,
             on each process.
         meta_episodes_per_learner_batch: meta-episodes per batch on each process.
-        meta_episode_len: timesteps per meta-episode.
+        num_meta_episodes: episodes per meta-episode.
         ppo_opt_epochs: optimization epochs for proximal policy optimization.
         ppo_clip_param: clip parameter for proximal policy optimization.
         ppo_ent_coef: entropy bonus coefficient for proximal policy optimization
@@ -194,7 +194,7 @@ def training_loop(
                 env=env,
                 policy_net=policy_net,
                 value_net=value_net,
-                meta_episode_len=meta_episode_len)
+                num_episodes=num_meta_episodes)
             meta_episode = assign_credit(
                 meta_episode=meta_episode,
                 gamma=discount_gamma,

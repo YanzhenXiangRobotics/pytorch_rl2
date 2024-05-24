@@ -38,7 +38,7 @@ def create_argparser():
         + "Ignored if environment is bandit.",
     )
     parser.add_argument(
-        "--meta_episode_len", type=int, default=100, help="Timesteps per meta-episode."
+        "--num_meta_episodes", type=int, default=3, help="Episodes per meta-episode."
     )
 
     ### Architecture
