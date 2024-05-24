@@ -2,6 +2,7 @@
 Script for training stateful meta-reinforcement learning agents
 """
 
+import os
 import argparse
 from functools import partial
 
@@ -21,70 +22,31 @@ from rl2.utils.constants import ROOT_RANK, DEVICE
 from rl2.utils.optim_util import get_weight_decay_param_groups
 from rl2.utils.setup_experiment import create_env, create_net
 
+import yaml
 
-def create_argparser():
+
+def add_args(config):
+
     parser = argparse.ArgumentParser(description="""Training script for RL^2.""")
 
     parser.add_argument(
-        "--log_wandb", action="store_true", help="Whether to use wandb for logging."
-    )
-
-    parser.add_argument(
-        "--headless", action="store_true", help="Whether to display GUI. Only for drone game."
-    )
-
-    ### Environment
-    parser.add_argument(
-        "--environment",
+        "--name",
         choices=["bandit", "tabular_mdp", "matrix_game_follower", "drone_game_follower"],
         default="bandit",
     )
-    parser.add_argument(
-        "--num_states", type=int, default=10, help="Only for yabular mdp."
-    )
-    parser.add_argument(
-        "--num_actions", type=int, default=5, help="Only for badit and tabular mdp."
-    )
-    parser.add_argument(
-        "--max_episode_len",
-        type=int,
-        default=10,
-        help="Timesteps before automatic episode reset. "
-        + "Ignored if environment is bandit.",
-    )
-    parser.add_argument(
-        "--num_meta_episodes", type=int, default=3, help="Episode per meta-episode."
-    )
 
-    ### Architecture
-    parser.add_argument(
-        "--architecture", choices=["gru", "lstm", "snail", "transformer"], default="gru"
-    )
-    parser.add_argument("--num_features", type=int, default=256)
+    args = parser.parse_args()
+    for key, value in vars(args).items():
+        for key_config, value_config in config.items():
+            if key in value_config.keys():
+                config[key_config][key] = value
 
-    ### Checkpointing
-    parser.add_argument("--model_name", type=str, default="defaults")
-    parser.add_argument("--checkpoint_dir", type=str, default="checkpoints")
+    for key in config.keys():
+        config[key] = argparse.Namespace(**config[key])
+    config = argparse.Namespace(**config)
 
-    ### Training
-    parser.add_argument("--max_pol_iters", type=int, default=12000)
-    parser.add_argument(
-        "--meta_episodes_per_policy_update",
-        type=int,
-        default=-1,
-        help="If -1, quantity is determined using a formula",
-    )
-    parser.add_argument("--meta_episodes_per_learner_batch", type=int, default=60)
-    parser.add_argument("--ppo_opt_epochs", type=int, default=8)
-    parser.add_argument("--ppo_clip_param", type=float, default=0.10)
-    parser.add_argument("--ppo_ent_coef", type=float, default=0.01)
-    parser.add_argument("--discount_gamma", type=float, default=0.99)
-    parser.add_argument("--gae_lambda", type=float, default=0.3)
-    parser.add_argument("--standardize_advs", type=int, choices=[0, 1], default=0)
-    parser.add_argument("--adam_lr", type=float, default=2e-4)
-    parser.add_argument("--adam_eps", type=float, default=1e-5)
-    parser.add_argument("--adam_wd", type=float, default=0.01)
-    return parser
+    return config
+
 
 def create_architecture(architecture, input_dim, num_features, context_size):
     if architecture == "gru":
@@ -124,35 +86,35 @@ def create_head(head_type, num_features, num_actions):
         return LinearValueHead(num_features=num_features)
     raise NotImplementedError
 
+
 def main():
     print("Using device:", DEVICE)
 
-    args = create_argparser().parse_args()
+    file_dir = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(file_dir, "rl2", "envs", "config.yml"), "rb") as file:
+        config = yaml.safe_load(file.read())
+
+    config = add_args(config)
+
     comm = get_comm()
 
     # create env.
-    env = create_env(
-        name=args.environment,
-        num_states=args.num_states,
-        num_actions=args.num_actions,
-        max_episode_len=args.max_episode_len,
-        headless=args.headless
-    )
+    env = create_env(config=config)
 
     # create learning system.
     policy_net = create_net(
         net_type="policy",
         env=env,
-        architecture=args.architecture,
-        num_features=args.num_features,
+        architecture=config.model.architecture,
+        num_features=config.model.num_features,
         context_size=0,
     )
 
     value_net = create_net(
         net_type="value",
         env=env,
-        architecture=args.architecture,
-        num_features=args.num_features,
+        architecture=config.model.architecture,
+        num_features=config.model.num_features,
         context_size=0,
     )
 
@@ -160,14 +122,14 @@ def main():
     value_net = value_net.to(DEVICE)
 
     policy_optimizer = tc.optim.AdamW(
-        get_weight_decay_param_groups(policy_net, args.adam_wd),
-        lr=args.adam_lr,
-        eps=args.adam_eps,
+        get_weight_decay_param_groups(policy_net, config.training.adam_wd),
+        lr=config.training.adam_lr,
+        eps=config.training.adam_eps,
     )
     value_optimizer = tc.optim.AdamW(
-        get_weight_decay_param_groups(value_net, args.adam_wd),
-        lr=args.adam_lr,
-        eps=args.adam_eps,
+        get_weight_decay_param_groups(value_net, config.training.adam_wd),
+        lr=config.training.adam_lr,
+        eps=config.training.adam_eps,
     )
 
     policy_scheduler = None
@@ -177,8 +139,8 @@ def main():
     pol_iters_so_far = 0
     if comm.Get_rank() == ROOT_RANK:
         a = maybe_load_checkpoint(
-            checkpoint_dir=args.checkpoint_dir,
-            model_name=f"{args.model_name}/policy_net",
+            checkpoint_dir=config.model.checkpoint_dir,
+            model_name=f"{config.model.model_name}/policy_net",
             model=policy_net,
             optimizer=policy_optimizer,
             scheduler=policy_scheduler,
@@ -186,8 +148,8 @@ def main():
         )
 
         b = maybe_load_checkpoint(
-            checkpoint_dir=args.checkpoint_dir,
-            model_name=f"{args.model_name}/value_net",
+            checkpoint_dir=config.model.checkpoint_dir,
+            model_name=f"{config.model.model_name}/value_net",
             model=value_net,
             optimizer=value_optimizer,
             scheduler=value_scheduler,
@@ -220,8 +182,8 @@ def main():
     # make callback functions for checkpointing.
     policy_checkpoint_fn = partial(
         save_checkpoint,
-        checkpoint_dir=args.checkpoint_dir,
-        model_name=f"{args.model_name}/policy_net",
+        checkpoint_dir=config.model.checkpoint_dir,
+        model_name=f"{config.model.model_name}/policy_net",
         model=policy_net,
         optimizer=policy_optimizer,
         scheduler=policy_scheduler,
@@ -229,20 +191,12 @@ def main():
 
     value_checkpoint_fn = partial(
         save_checkpoint,
-        checkpoint_dir=args.checkpoint_dir,
-        model_name=f"{args.model_name}/value_net",
+        checkpoint_dir=config.model.checkpoint_dir,
+        model_name=f"{config.model.model_name}/value_net",
         model=value_net,
         optimizer=value_optimizer,
         scheduler=value_scheduler,
     )
-
-    # run it!
-    if args.meta_episodes_per_policy_update == -1:
-        numer = 240000
-        denom = comm.Get_size() * args.num_meta_episodes * args.max_episode_len
-        meta_episodes_per_policy_update = numer // denom
-    else:
-        meta_episodes_per_policy_update = args.meta_episodes_per_policy_update
 
     training_loop(
         env=env,
@@ -252,21 +206,21 @@ def main():
         value_optimizer=value_optimizer,
         policy_scheduler=policy_scheduler,
         value_scheduler=value_scheduler,
-        meta_episodes_per_policy_update=meta_episodes_per_policy_update,
-        meta_episodes_per_learner_batch=args.meta_episodes_per_learner_batch,
-        num_meta_episodes=args.num_meta_episodes,
-        ppo_opt_epochs=args.ppo_opt_epochs,
-        ppo_clip_param=args.ppo_clip_param,
-        ppo_ent_coef=args.ppo_ent_coef,
-        discount_gamma=args.discount_gamma,
-        gae_lambda=args.gae_lambda,
-        standardize_advs=bool(args.standardize_advs),
-        max_pol_iters=args.max_pol_iters,
+        meta_episodes_per_policy_update=config.training.meta_episodes_per_policy_update,
+        meta_episodes_per_learner_batch=config.training.meta_episodes_per_learner_batch,
+        num_meta_episodes=config.env.num_meta_episodes,
+        ppo_opt_epochs=config.training.ppo_opt_epochs,
+        ppo_clip_param=config.training.ppo_clip_param,
+        ppo_ent_coef=config.training.ppo_ent_coef,
+        discount_gamma=config.training.discount_gamma,
+        gae_lambda=config.training.gae_lambda,
+        standardize_advs=bool(config.training.standardize_advs),
+        max_pol_iters=config.training.max_pol_iters,
         pol_iters_so_far=pol_iters_so_far,
         policy_checkpoint_fn=policy_checkpoint_fn,
         value_checkpoint_fn=value_checkpoint_fn,
         comm=comm,
-        log_wandb=args.log_wandb,
+        log_wandb=config.training.log_wandb,
     )
 
 
