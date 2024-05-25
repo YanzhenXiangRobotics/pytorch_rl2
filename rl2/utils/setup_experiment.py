@@ -142,13 +142,13 @@ def create_net(
     raise NotImplementedError
 
 
-def get_policy_net_for_inference(args, env):
+def get_policy_net_for_inference(config, env):
     # create learning system.
     policy_net = create_net(
         net_type="policy",
         env=env,
-        architecture=args.architecture,
-        num_features=args.num_features,
+        architecture=config.model.architecture,
+        num_features=config.model.num_features,
         context_size=0,
     )
 
@@ -156,8 +156,8 @@ def get_policy_net_for_inference(args, env):
 
     # load checkpoint, if applicable.
     maybe_load_checkpoint(
-        checkpoint_dir=args.checkpoint_dir,
-        model_name=f"{args.model_name}/policy_net",
+        checkpoint_dir=config.model.checkpoint_dir,
+        model_name=f"{config.model.model_name}/policy_net",
         model=policy_net,
         optimizer=None,
         scheduler=None,

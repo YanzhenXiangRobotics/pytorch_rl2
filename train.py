@@ -4,6 +4,8 @@ Script for training stateful meta-reinforcement learning agents
 
 import os
 import argparse
+import yaml
+
 from functools import partial
 
 import torch as tc
@@ -21,9 +23,6 @@ from rl2.utils.comm_util import get_comm, sync_state
 from rl2.utils.constants import ROOT_RANK, DEVICE
 from rl2.utils.optim_util import get_weight_decay_param_groups
 from rl2.utils.setup_experiment import create_env, create_net
-
-import yaml
-
 
 def add_args(config):
 

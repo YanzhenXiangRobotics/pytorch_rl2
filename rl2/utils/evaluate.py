@@ -4,18 +4,19 @@ import torch as tc
 from rl2.utils.setup_experiment import get_policy_net_for_inference, create_env
 from rl2.utils.constants import DEVICE
 
+
 # Only works for matrix game at the moment
-def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
+def evaluate(config, policy_net=None, leader_policy=None, verbose=False):
     # create env.
-    env = create_env(
-        name=args.environment,
-        num_states=args.num_states,
-        num_actions=args.num_actions,
-        max_episode_len=args.max_episode_len,
-        headless=args.headless)
+    env = create_env(config=config)
+    if config.env.name == "drone_game_follower":
+        assert (
+            len(leader_policy) == 2**env._env.env.num_divisions
+        ), "Leader policy size is not correct."
+        env._env.headless = False
 
     if policy_net is None:
-        policy_net = get_policy_net_for_inference(args, env)
+        policy_net = get_policy_net_for_inference(config, env)
 
     def evaluate_policy(leader_policy):
         rewards = []
@@ -41,8 +42,7 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
             action = tc.atleast_1d(tc.argmax(pi_dist.probs))
 
             new_obs, reward, done, _ = env.step(
-                action=action.squeeze(0).detach().cpu().numpy(),
-                auto_reset=True
+                action=action.squeeze(0).detach().cpu().numpy(), auto_reset=True
             )
 
             rewards.append(reward)
@@ -57,9 +57,9 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
 
             if done:
                 current_episode += 1
-                if current_episode >= args.num_meta_episodes:
+                if current_episode >= config.env.num_meta_episodes:
                     break
-        
+
         return np.sum(rewards)
 
     if leader_policy is not None:
@@ -70,4 +70,3 @@ def evaluate(args, policy_net=None, leader_policy=None, verbose=False):
             reward = evaluate_policy([int(x) for x in np.binary_repr(i, width=5)])
             rewards.append(reward)
         return np.mean(rewards)
-

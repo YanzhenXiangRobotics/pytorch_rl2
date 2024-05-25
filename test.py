@@ -2,68 +2,25 @@
 Script for training stateful meta-reinforcement learning agents
 """
 
-import argparse
+import os
+import yaml
 from rl2.utils.evaluate import evaluate
 
-
-def create_argparser():
-    parser = argparse.ArgumentParser(description="""Training script for RL^2.""")
-
-    parser.add_argument(
-        "--headless",
-        action="store_true",
-        help="Whether to display GUI. Only for drone game.",
-    )
-
-    ### Environment
-    parser.add_argument(
-        "--environment",
-        choices=[
-            "bandit",
-            "tabular_mdp",
-            "matrix_game_follower",
-            "drone_game_follower",
-        ],
-        default="bandit",
-    )
-    parser.add_argument(
-        "--num_states", type=int, default=10, help="Ignored if environment is bandit."
-    )
-    parser.add_argument("--num_actions", type=int, default=5)
-    parser.add_argument(
-        "--max_episode_len",
-        type=int,
-        default=10,
-        help="Timesteps before automatic episode reset. "
-        + "Ignored if environment is bandit.",
-    )
-    parser.add_argument(
-        "--num_meta_episodes", type=int, default=3, help="Episodes per meta-episode."
-    )
-
-    ### Architecture
-    parser.add_argument(
-        "--architecture", choices=["gru", "lstm", "snail", "transformer"], default="gru"
-    )
-    parser.add_argument("--num_features", type=int, default=256)
-
-    ### Checkpointing
-    parser.add_argument("--model_name", type=str, default="defaults")
-    parser.add_argument("--checkpoint_dir", type=str, default="checkpoints")
-    return parser
+from train import add_args
 
 
 def main():
-    args = create_argparser().parse_args()
-    if args.environment == "matrix_game_follower":
-        evaluate(args, verbose=True, leader_policy=[1, 0, 0, 1, 1])
-    elif args.environment == "drone_game_follower":
+    file_dir = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(file_dir, "rl2", "envs", "config.yml"), "rb") as file:
+        config = yaml.safe_load(file.read())
+    config = add_args(config)
+    if config.env.name == "matrix_game_follower":
+        evaluate(config, verbose=True, leader_policy=[1, 0, 0, 1, 1])
+    elif config.env.name == "drone_game_follower":
         evaluate(
-            args,
+            config,
             verbose=True,
-            # leader_policy=[0, 3, 3, 0, 3, 0, 3, 0, 0, 3, 0, 3, 0, 3, 0, 3],
-            # leader_policy=[1, 2, 2, 2, 1, 1, 2, 1, 1, 2, 1, 2, 1, 2, 1, 2]
-            leader_policy=[2 for _ in range(16)]
+            leader_policy=[10 for _ in range(2**12)]
         )
 
 

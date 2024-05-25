@@ -40,4 +40,4 @@ drone_game:
   width: 63
   height: 62
   drone_dist: 5
-  headless: True
+  headless: True # Only for training, testing is always not headless

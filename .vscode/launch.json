@@ -76,14 +76,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/test.py",
             "console": "integratedTerminal",
-            "args": ["--environment",
+            "args": ["--name",
                     "drone_game_follower",
-                    // "--max_episode_len",
-                    // "20",
-                    "--meta_episode_len",
-                    "60",
-                    // "--num_features",
-                    // "1024",
                     ]
         },
         {
