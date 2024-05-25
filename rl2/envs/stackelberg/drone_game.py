@@ -51,7 +51,7 @@ class DroneGameEnv(MiniGridEnv):
         self.drone_options = []
         drone_ys = np.arange(3, height + 1, step=drone_dist)
         for y in drone_ys:
-            self.drone_options.append((width - 8, y))
+            self.drone_options.append((int((width - 3) * 0.75), y))
 
         self.num_divisions = len(self.drone_options)
         self.drone_cover_size = drone_cover_size
@@ -189,7 +189,7 @@ class DroneGame(ParallelEnv):
 
         if not self.headless:
             self.env.render()
-            time.sleep(0.5)
+            # time.sleep(0.1)
 
         return observations, rewards, terminated, truncated, info
 
