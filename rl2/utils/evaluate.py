@@ -16,7 +16,7 @@ def evaluate(config, policy_net=None, leader_policy=None, verbose=False):
         env._env.headless = False
 
     if policy_net is None:
-        policy_net = get_policy_net_for_inference(config, env)
+        policy_net = get_policy_net_for_inference(env, config)
 
     def evaluate_policy(leader_policy):
         rewards = []
