@@ -142,7 +142,7 @@ def create_net(
     raise NotImplementedError
 
 
-def get_policy_net_for_inference(config, env):
+def get_policy_net_for_inference(env, config):
     # create learning system.
     policy_net = create_net(
         net_type="policy",

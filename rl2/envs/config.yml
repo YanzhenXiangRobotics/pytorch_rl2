@@ -1,3 +1,4 @@
+# Note: current code only allows config.yml with 2 layers
 env:
   name: "bandit"
   num_meta_episodes: 3
@@ -37,7 +38,7 @@ matrix_game:
   episode_len: 10
 
 drone_game:
-  width: 63
-  height: 62
+  width: 33
+  height: 32
   drone_dist: 5
   headless: True # Only for training, testing is always not headless

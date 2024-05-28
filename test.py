@@ -4,6 +4,9 @@ Script for training stateful meta-reinforcement learning agents
 
 import os
 import yaml
+import numpy as np
+
+
 from rl2.utils.evaluate import evaluate
 
 from train import add_args
@@ -20,7 +23,8 @@ def main():
         evaluate(
             config,
             verbose=True,
-            leader_policy=[10 for _ in range(2**12)]
+            # leader_policy=[1, 1, 1, 1] + [np.random.randint(2) for _ in range(2**10-4)],
+            leader_policy=[0 for _ in range(2**6)]
         )
 
 

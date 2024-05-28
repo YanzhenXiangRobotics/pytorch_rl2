@@ -1,18 +1,26 @@
+import os
+
 import argparse
+
+import yaml
 
 import numpy as np
 
 # import ppo form stable baselines
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 
 from rl2.utils.setup_experiment import create_env, get_policy_net_for_inference
+from rl2.utils.rmckp_callback import RmckpCallback
 
-from rl2.envs.stackelberg.matrix_game import IteratedMatrixGame
 from rl2.envs.stackelberg.trial_wrapper import TrialWrapper
 from rl2.envs.stackelberg.leader_env import SingleAgentLeaderWrapper
 
+from train import add_args
+
 import wandb
 from wandb.integration.sb3 import WandbCallback
+
 
 def create_argparser():
     parser = argparse.ArgumentParser(description="""Training script for RL^2.""")
@@ -45,20 +53,48 @@ def create_argparser():
     parser.add_argument("--checkpoint_dir", type=str, default="checkpoints")
     return parser
 
-def train(env, args):
 
+def train(env, config):
     run = wandb.init(project="rl2-leader", sync_tensorboard=True)
 
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}",)
-    model.learn(total_timesteps=600_000, callback=WandbCallback(gradient_save_freq=100, verbose=2))
+    model = PPO(
+        "MlpPolicy",
+        env,
+        verbose=1,
+        tensorboard_log=f"runs/{run.id}",
+    )
 
-    model.save(f"checkpoints/leader_ppo_{args.environment}")
+    total_timesteps = 1000_000
+    ckp_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "checkpoints", "leader"
+    )
+    checkpoint_callback = CheckpointCallback(
+        save_freq=1000,
+        save_path=ckp_path,
+        save_replay_buffer=True,
+        save_vecnormalize=True,
+        name_prefix="model",
+    )
+    rmckp_callback = RmckpCallback(ckp_path=ckp_path)
 
-def test(env, args):
+    if config.training.log_wandb:
+        wandb_callback = WandbCallback(gradient_save_freq=100, verbose=2)
+        callback = CallbackList([checkpoint_callback, wandb_callback, rmckp_callback])
+    else:
+        callback = CallbackList([checkpoint_callback, rmckp_callback])
 
-    model = PPO.load(f"checkpoints/leader_ppo_{args.environment}")
+    model.learn(
+        total_timesteps=total_timesteps,
+        callback=callback,
+    )
 
-    if args.environment == "drone_game_follower":
+    model.save(f"checkpoints/leader_ppo_{config.env.name}")
+
+
+def test(env, config):
+    model = PPO.load(f"checkpoints/leader_ppo_{config.env.name}")
+
+    if config.env.name == "drone_game_follower":
         env.env.env.headless = False
 
     obs, _ = env.reset()
@@ -69,12 +105,13 @@ def test(env, args):
         obs = new_obs
         if terminated or truncated:
             break
-    if args.environment == "matrix_game_follower":
+
+    if config.env.name == "matrix_game_follower":
         leader_policy = [
             model.predict(obs, deterministic=True)[0].item() for obs in range(5)
         ]
         print(leader_policy)
-    elif args.environment == "drone_game_follower":
+    elif config.env.name == "drone_game_follower":
         leader_policy = [
             model.predict(
                 [int(b) for b in np.binary_repr(obs, width=4)], deterministic=True
@@ -83,20 +120,21 @@ def test(env, args):
         ]
         print(leader_policy)
 
+
 if __name__ == "__main__":
-    
-    args = create_argparser().parse_args()
+    file_dir = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(file_dir, "rl2", "envs", "config.yml"), "rb") as file:
+        config = yaml.safe_load(file.read())
 
-    follower_env = create_env(
-        name=args.environment,
-        max_episode_len=args.max_episode_len,
-        headless=True,
-    )
+    config = add_args(config)
 
-    policy_net = get_policy_net_for_inference(args, follower_env)
+    follower_env = create_env(config=config)
+
+    policy_net = get_policy_net_for_inference(follower_env, config)
 
     env = TrialWrapper(follower_env._env, num_episodes=3)
     env = SingleAgentLeaderWrapper(env, follower_policy_net=policy_net)
 
-    # env = train(env, args)
-    test(env, args)
+    train(env, config)
+
+    test(env, config)

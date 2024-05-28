@@ -60,6 +60,8 @@ def evaluate(config, policy_net=None, leader_policy=None, verbose=False):
                 if current_episode >= config.env.num_meta_episodes:
                     break
 
+        env._env.env.close(video_name="size6_rnn.avi")
+
         return np.sum(rewards)
 
     if leader_policy is not None:

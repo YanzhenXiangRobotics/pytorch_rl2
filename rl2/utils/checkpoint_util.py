@@ -15,7 +15,8 @@ def _format_name(kind, steps):
 
 
 def _parse_name(filename):
-    kind, steps = filename.split(".")[0].split("_")
+    parts = filename.split(".")[0].split("_")
+    kind, steps = parts[0], parts[1]
     steps = int(steps)
     return {
         "kind": kind,
