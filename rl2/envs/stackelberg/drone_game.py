@@ -139,6 +139,8 @@ class DroneGame(ParallelEnv):
 
         self.drones = []
 
+        self.sleep_time = 0
+
     def action_space(self, agent: str) -> spaces.Space:
         return self.action_spaces[agent]
 
@@ -189,7 +191,8 @@ class DroneGame(ParallelEnv):
 
         if not self.headless:
             self.env.render()
-            # time.sleep(0.1)
+            if self.sleep_time != 0:
+                time.sleep(self.sleep_time)
 
         return observations, rewards, terminated, truncated, info
 

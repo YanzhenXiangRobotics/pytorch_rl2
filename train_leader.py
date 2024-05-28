@@ -4,8 +4,6 @@ import argparse
 
 import yaml
 
-import numpy as np
-
 # import ppo form stable baselines
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
@@ -64,7 +62,7 @@ def train(env, config):
         tensorboard_log=f"runs/{run.id}",
     )
 
-    total_timesteps = 1000_000
+    total_timesteps = 1000_0000
     ckp_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "checkpoints", "leader"
     )
@@ -91,36 +89,6 @@ def train(env, config):
     model.save(f"checkpoints/leader_ppo_{config.env.name}")
 
 
-def test(env, config):
-    model = PPO.load(f"checkpoints/leader_ppo_{config.env.name}")
-
-    if config.env.name == "drone_game_follower":
-        env.env.env.headless = False
-
-    obs, _ = env.reset()
-    while True:
-        action = model.predict(obs, deterministic=True)[0]
-        new_obs, reward, terminated, truncated, info = env.step(action)
-        print(obs, action, reward)
-        obs = new_obs
-        if terminated or truncated:
-            break
-
-    if config.env.name == "matrix_game_follower":
-        leader_policy = [
-            model.predict(obs, deterministic=True)[0].item() for obs in range(5)
-        ]
-        print(leader_policy)
-    elif config.env.name == "drone_game_follower":
-        leader_policy = [
-            model.predict(
-                [int(b) for b in np.binary_repr(obs, width=4)], deterministic=True
-            )[0].item()
-            for obs in range(16)
-        ]
-        print(leader_policy)
-
-
 if __name__ == "__main__":
     file_dir = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(file_dir, "rl2", "envs", "config.yml"), "rb") as file:
@@ -136,5 +104,3 @@ if __name__ == "__main__":
     env = SingleAgentLeaderWrapper(env, follower_policy_net=policy_net)
 
     train(env, config)
-
-    test(env, config)

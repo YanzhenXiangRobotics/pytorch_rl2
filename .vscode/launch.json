@@ -90,5 +90,15 @@
                     "drone_game_follower",
                     ]
         },
+        {
+            "name": "drone game leader testing",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_leader.py",
+            "console": "integratedTerminal",
+            "args": ["--name",
+                    "drone_game_follower",
+                    ]
+        },
     ]
 }
