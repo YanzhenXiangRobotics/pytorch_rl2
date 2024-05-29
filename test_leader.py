@@ -42,7 +42,7 @@ def test(env, config):
     elif config.env.name == "drone_game_follower":
         leader_policy = [
             model.predict(
-                [int(b) for b in np.binary_repr(obs, width=4)], deterministic=True
+                [int(b) for b in np.binary_repr(obs, width=4)][::-1], deterministic=True
             )[0].item()
             for obs in range(16)
         ]

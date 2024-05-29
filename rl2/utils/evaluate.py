@@ -69,6 +69,6 @@ def evaluate(config, policy_net=None, leader_policy=None, verbose=False):
     else:
         rewards = []
         for i in range(32):
-            reward = evaluate_policy([int(x) for x in np.binary_repr(i, width=5)])
+            reward = evaluate_policy([int(x) for x in np.binary_repr(i, width=5)][::-1])
             rewards.append(reward)
         return np.mean(rewards)
