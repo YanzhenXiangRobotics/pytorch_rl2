@@ -38,7 +38,7 @@ matrix_game:
   episode_len: 10
 
 drone_game:
-  width: 33
-  height: 32
+  width: 23
+  height: 22
   drone_dist: 5
   headless: True # Only for training, testing is always not headless

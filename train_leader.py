@@ -9,6 +9,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 
 from rl2.utils.setup_experiment import create_env, get_policy_net_for_inference
+from rl2.utils.checkpoint_util import _latest_step
 from rl2.utils.rmckp_callback import RmckpCallback
 
 from rl2.envs.stackelberg.trial_wrapper import TrialWrapper
@@ -55,23 +56,31 @@ def create_argparser():
 def train(env, config):
     run = wandb.init(project="rl2-leader", sync_tensorboard=True)
 
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=1,
-        tensorboard_log=f"runs/{run.id}",
-    )
+    ckp_path = "checkpoints/leader"
+
+    if os.listdir(ckp_path):
+        latest_step = _latest_step(ckp_path)
+        model_name = f"checkpoints/leader/model_{latest_step}_steps.zip"
+        print("Loading leader model from " + model_name)
+        model = PPO.load(model_name, env)
+    else:
+        latest_step = 0
+        model = PPO(
+            "MlpPolicy",
+            env,
+            verbose=1,
+            tensorboard_log=f"runs/{run.id}",
+        )
 
     total_timesteps = 1000_0000
-    ckp_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "checkpoints", "leader"
-    )
+
     checkpoint_callback = CheckpointCallback(
         save_freq=1000,
         save_path=ckp_path,
         save_replay_buffer=True,
         save_vecnormalize=True,
         name_prefix="model",
+        base_num_steps=latest_step
     )
     rmckp_callback = RmckpCallback(ckp_path=ckp_path)
 

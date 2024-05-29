@@ -24,7 +24,9 @@ def main():
             config,
             verbose=True,
             # leader_policy=[1, 1, 1, 1] + [np.random.randint(2) for _ in range(2**10-4)],
-            leader_policy=[0 for _ in range(2**6)]
+            # leader_policy=[0 for _ in range(2**4)]
+            leader_policy= [0, 3, 0, 3, 3, 0, 3, 0, 0, 0, 3, 3, 0, 3, 0, 3]
+            # leader_policy= [1, 3, 1, 3, 3, 1, 3, 1, 1, 1, 3, 3, 1, 3, 1, 3]
         )
 
 
