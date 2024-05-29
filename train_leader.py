@@ -64,7 +64,6 @@ def train(env, config):
         print("Loading leader model from " + model_name)
         model = PPO.load(model_name, env)
     else:
-        latest_step = 0
         model = PPO(
             "MlpPolicy",
             env,
@@ -80,19 +79,18 @@ def train(env, config):
         save_replay_buffer=True,
         save_vecnormalize=True,
         name_prefix="model",
-        base_num_steps=latest_step
     )
     rmckp_callback = RmckpCallback(ckp_path=ckp_path)
 
+    callback_list = [checkpoint_callback, rmckp_callback]
     if config.training.log_wandb:
         wandb_callback = WandbCallback(gradient_save_freq=100, verbose=2)
-        callback = CallbackList([checkpoint_callback, wandb_callback, rmckp_callback])
-    else:
-        callback = CallbackList([checkpoint_callback, rmckp_callback])
+        callback_list.append(wandb_callback)
 
     model.learn(
         total_timesteps=total_timesteps,
-        callback=callback,
+        callback=CallbackList(callback_list),
+        reset_num_timesteps=False,
     )
 
     model.save(f"checkpoints/leader_ppo_{config.env.name}")
